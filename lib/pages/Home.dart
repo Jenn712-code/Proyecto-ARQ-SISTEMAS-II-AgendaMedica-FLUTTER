@@ -44,11 +44,11 @@ class _HomePageState extends State<HomePage> {
       child: Scaffold(
         backgroundColor: AppTheme.backgroundColor,
         body: SafeArea(
-        child: RawKeyboardListener(
+        child: KeyboardListener(
         focusNode: _keyboardFocusNode,
           autofocus: true,
-            onKey: (event) async {
-              if (event.isKeyPressed(LogicalKeyboardKey.enter)) {
+          onKeyEvent: (event) async {
+              if (event.logicalKey == LogicalKeyboardKey.enter && event is KeyDownEvent) {
                 if (_formKey.currentState!.validate()) {
                   final success = await model.iniciarSesion(context);
                     if (success && context.mounted) {
@@ -200,7 +200,7 @@ class _HomePageState extends State<HomePage> {
                               );
                             },
                             icon: const FaIcon(
-                                FontAwesomeIcons.solidSadTear, size: 20),
+                                FontAwesomeIcons.solidFaceSadTear, size: 20),
                             iconAlignment: IconAlignment.end,
                             label: const Text("Olvidé la contraseña"),
                           ),
