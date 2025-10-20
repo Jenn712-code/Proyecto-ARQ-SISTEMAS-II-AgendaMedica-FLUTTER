@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
@@ -11,10 +10,8 @@ class HomePageModel {
   // Controladores y FocusNodes
   final TextEditingController txtCorreoController = TextEditingController();
   final FocusNode txtCorreoFocus = FocusNode();
-
   final TextEditingController txtContrasenaController = TextEditingController();
   final FocusNode txtContrasenaFocus = FocusNode();
-
   bool passwordVisible = false;
 
   void dispose() {
@@ -22,6 +19,12 @@ class HomePageModel {
     txtCorreoFocus.dispose();
     txtContrasenaController.dispose();
     txtContrasenaFocus.dispose();
+  }
+
+  void limpiarCampos(GlobalKey<FormState> formKey) {
+    txtCorreoController.clear();
+    txtContrasenaController.clear();
+    formKey.currentState?.reset();
   }
 
   Future<bool> iniciarSesion(BuildContext context) async {
@@ -53,8 +56,6 @@ class HomePageModel {
 
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('token', data['token']);
-        await prefs.setString('correo', data['correo']);
-        await prefs.setString('nombre', data['nombre']);
 
         print("Token guardado correctamente");
         return true;
@@ -99,7 +100,7 @@ class HomePageModel {
             color: Colors.black,
           ),
         ),
-        actionsAlignment: MainAxisAlignment.center, // centra el botón
+        actionsAlignment: MainAxisAlignment.center,
         actions: [
           TextButton(
             style: TextButton.styleFrom(
@@ -124,6 +125,5 @@ class HomePageModel {
       ),
     );
   }
-
 }
 
