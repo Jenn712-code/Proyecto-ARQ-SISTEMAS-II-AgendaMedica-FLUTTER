@@ -29,6 +29,7 @@ class _OlvideContrasenaPageState extends State<OlvideContrasena> {
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
+            fontSize: 24,
           ),
         ),
         iconTheme: const IconThemeData(

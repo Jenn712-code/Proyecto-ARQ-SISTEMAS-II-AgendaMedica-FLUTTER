@@ -74,7 +74,7 @@ class CrearMedicamentoModel {
         "medDuracion": int.parse(duracionController.text),
         "medFecha": fechaHoraCombinada?.toIso8601String(),
         "medRecordatorio": recordatorio,
-        "medEstado": "pendiente",
+        "medEstado": "Pendiente",
       };
 
       final url = Uri.parse("${ApiConfig.baseUrl}/medicamentos/crearMedicamento");
