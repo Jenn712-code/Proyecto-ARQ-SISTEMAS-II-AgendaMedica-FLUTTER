@@ -26,7 +26,7 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     model = HomePageModel();
-    _limpiarCampos();
+    model.limpiarCampos(_formKey);
   }
 
   @override
@@ -34,7 +34,7 @@ class _HomePageState extends State<HomePage> {
     model.dispose();
     _keyboardFocusNode.dispose();
     super.dispose();
-    _limpiarCampos();
+    model.limpiarCampos(_formKey);
   }
 
   @override
@@ -44,17 +44,17 @@ class _HomePageState extends State<HomePage> {
       child: Scaffold(
         backgroundColor: AppTheme.backgroundColor,
         body: SafeArea(
-        child: RawKeyboardListener(
+        child: KeyboardListener(
         focusNode: _keyboardFocusNode,
           autofocus: true,
-            onKey: (event) async {
-              if (event.isKeyPressed(LogicalKeyboardKey.enter)) {
+          onKeyEvent: (event) async {
+              if (event.logicalKey == LogicalKeyboardKey.enter && event is KeyDownEvent) {
                 if (_formKey.currentState!.validate()) {
                   final success = await model.iniciarSesion(context);
                     if (success && context.mounted) {
                       Navigator.pushReplacement(
                       context,
-                      MaterialPageRoute(builder: (context) => Dashboard()),
+                      MaterialPageRoute(builder: (context) => const Dashboard()),
                     );
                   }
                 }
@@ -165,7 +165,7 @@ class _HomePageState extends State<HomePage> {
                             if (_formKey.currentState!.validate()) {
                               final ok = await model.iniciarSesion(context);
                               if (ok) {
-                                _limpiarCampos();
+                                model.limpiarCampos(_formKey);
                                 // Ir al Dashboard
                                 Navigator.pushReplacement(
                                   context,
@@ -192,16 +192,15 @@ class _HomePageState extends State<HomePage> {
                           // Botón olvidar contraseña
                           TextButton.icon(
                             onPressed: (){
-                              _limpiarCampos();
-                              model.txtCorreoController.clear();
-                              model.txtContrasenaController.clear();
+                              model.limpiarCampos(_formKey);
+                              _formKey.currentState?.reset();
                               Navigator.push(
                               context,
                               MaterialPageRoute(builder: (context) => const OlvideContrasena()),
                               );
                             },
                             icon: const FaIcon(
-                                FontAwesomeIcons.solidSadTear, size: 20),
+                                FontAwesomeIcons.solidFaceSadTear, size: 20),
                             iconAlignment: IconAlignment.end,
                             label: const Text("Olvidé la contraseña"),
                           ),
@@ -268,10 +267,5 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
     );
-  }
-
-  void _limpiarCampos() {
-    model.txtCorreoController.clear();
-    model.txtContrasenaController.clear();
   }
 }
