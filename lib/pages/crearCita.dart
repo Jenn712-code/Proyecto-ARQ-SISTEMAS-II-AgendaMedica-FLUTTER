@@ -1,10 +1,9 @@
-import 'dart:convert';
-
+import 'package:flutter_agenda_medica/controllers/crearCitaModel.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:http/http.dart' as http;
-
-import '../config/api_config.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import '../theme/AppTheme.dart';
 
 class crearCita extends StatefulWidget {
   const crearCita({super.key});
@@ -14,93 +13,43 @@ class crearCita extends StatefulWidget {
 }
 
 class _CrearCitaState extends State<crearCita> {
-  final _formKey = GlobalKey<FormState>();
 
-  // Controladores
-  final TextEditingController _nombreMedicoController = TextEditingController();
-  final TextEditingController _fechaController = TextEditingController();
-  final TextEditingController _horaController = TextEditingController();
-  final TextEditingController _direccionController = TextEditingController();
-  bool _recordatorio = false; // valor por defecto
-  List<Map<String, dynamic>> _especialidades = [];
-  int? _especialidadSeleccionada;
+  final model = crearCitaModel();
 
   @override
   void initState() {
     super.initState();
-    _cargarEspecialidades();
+    model.cargarEspecialidades(() => setState(() {}));
   }
 
-  Future<void> _cargarEspecialidades() async {
-    final url = Uri.parse("${ApiConfig.baseUrl}/especialidades/listarEspecialidades");
-    final response = await http.get(url);
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body) as List;
-      setState(() {
-        _especialidades = data.map((e) => {
-          "id": e["id"],
-          "nombre": e["nombre"]
-        }).toList();
-      });
-    } else {
-      throw Exception("Error al cargar especialidades");
-    }
+  @override
+  void dispose() {
+    model.nombreMedicoController.dispose();
+    model.fechaController.dispose();
+    model.horaController.dispose();
+    model.direccionController.dispose();
+    super.dispose();
   }
-
-  Future<void> _guardarCita() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    /*final pacienteId = await _obtenerPacienteId();
-
-    if (pacienteId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("No se encontró la sesión del paciente")),
-      );
-      return;
-    }*/
-
-    final cita = {
-      "citNomMedico": _nombreMedicoController,
-      "citFecha": _fechaController.text,
-      "citHora": _horaController.text,
-      "citDireccion": _direccionController,
-      "citRecordatorio": _recordatorio,
-      //"pacCedula": pacCedula,
-      "espId": _especialidadSeleccionada
-    };
-
-    final url = Uri.parse("${ApiConfig.baseUrl}/citas/crearCita");
-    final response = await http.post(
-      url,
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode(cita),
-    );
-
-    if (response.statusCode == 200) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Cita guardada con éxito")),
-      );
-      Navigator.pop(context);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error al guardar cita: ${response.body}")),
-      );
-    }
-  }
-
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Crear Cita"),
+        title: const Text("Crear Cita",
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 24,
+          ),
+        ),
+        iconTheme: const IconThemeData(
+          color: Colors.white,
+        ),
         backgroundColor: Colors.blue.shade900,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Form(
-          key: _formKey,
+          key: model.formKey,
           child: Column(
             children: [
               // Título
@@ -118,8 +67,8 @@ class _CrearCitaState extends State<crearCita> {
 
               // Campo Nombre
               _buildTextField(
-                controller: _nombreMedicoController,
-                label: 'Nombre del medico',
+                controller: model.nombreMedicoController,
+                label: 'Nombre del médico',
                 icon: Icons.person,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -133,22 +82,11 @@ class _CrearCitaState extends State<crearCita> {
 
               // Campo Fecha
               _buildTextField(
-                controller: _fechaController,
-                label: 'Fecha (DD/MM/AAAA)',
+                controller: model.fechaController,
+                label: 'Fecha',
                 icon: Icons.calendar_today,
                 readOnly: true,
-                onTap: () async {
-                  DateTime? pickedDate = await showDatePicker(
-                    context: context,
-                    initialDate: DateTime.now(),
-                    firstDate: DateTime.now(),
-                    lastDate: DateTime(2100),
-                  );
-                  if (pickedDate != null) {
-                    _fechaController.text =
-                    "${pickedDate.day}/${pickedDate.month}/${pickedDate.year}";
-                  }
-                },
+                onTap: () => _mostrarSelectorFecha(context),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return "La fecha es obligatoria";
@@ -161,7 +99,7 @@ class _CrearCitaState extends State<crearCita> {
 
               // Campo Hora
               _buildTextField(
-                controller: _horaController,
+                controller: model.horaController,
                 label: 'Hora',
                 icon: Icons.access_time,
                 readOnly: true,
@@ -169,10 +107,28 @@ class _CrearCitaState extends State<crearCita> {
                   TimeOfDay? pickedTime = await showTimePicker(
                     context: context,
                     initialTime: TimeOfDay.now(),
+                    builder: (context, child) {
+                      return Localizations.override(
+                        context: context,
+                        locale: const Locale('en'), // mantiene formato AM/PM
+                        delegates: const [
+                          _CustomEnglishMaterialLocalizationsDelegate(),
+                          GlobalWidgetsLocalizations.delegate,
+                          GlobalCupertinoLocalizations.delegate,
+                        ],
+                        child: MediaQuery(
+                          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: false),
+                          child: child!,
+                        ),
+                      );
+                    },
                   );
+
                   if (pickedTime != null) {
-                    _horaController.text =
-                    "${pickedTime.hour}:${pickedTime.minute.toString().padLeft(2, '0')}";
+                    final hour = pickedTime.hourOfPeriod == 0 ? 12 : pickedTime.hourOfPeriod;
+                    final minute = pickedTime.minute.toString().padLeft(2, '0');
+                    final period = pickedTime.period == DayPeriod.am ? 'AM' : 'PM';
+                    model.horaController.text = "$hour:$minute $period";
                   }
                 },
                 validator: (value) {
@@ -183,10 +139,12 @@ class _CrearCitaState extends State<crearCita> {
                 },
               ),
 
+              const SizedBox(height: 15),
+
               // Campo dirección
               _buildTextField(
-                controller: _direccionController,
-                label: 'Correo',
+                controller: model.direccionController,
+                label: 'Dirección',
                 icon: Icons.directions,
                 validator: (value){
                   if (value == null || value.isEmpty) {
@@ -196,43 +154,68 @@ class _CrearCitaState extends State<crearCita> {
                 },
               ),
 
+              const SizedBox(height: 15),
+
               // Dropdown especialidad
-              DropdownButtonFormField<int>(
-                value: _especialidadSeleccionada,
-                decoration: const InputDecoration(labelText: "Especialidad"),
-                items: _especialidades
-                    .map((e) => DropdownMenuItem<int>(
-                  value: e["id"],
-                  child: Text(e["nombre"]),
-                ))
-                    .toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _especialidadSeleccionada = value;
-                  });
-                },
-                validator: (value) =>
-                value == null ? "Seleccione una especialidad" : null,
+              Center(
+                child: FractionallySizedBox(
+                widthFactor: 0.8,
+                  child: DropdownButtonFormField<int>(
+                    initialValue: model.especialidadSeleccionada,
+                    decoration: const InputDecoration(labelText: "Especialidad"),
+                    items: model.especialidades
+                        .map((esp) => DropdownMenuItem<int>(
+                      value: esp["id"],
+                      child: Text(esp["nombre"],
+                        style: GoogleFonts.roboto(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ))
+                        .toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        model.especialidadSeleccionada = value;
+                      });
+                    },
+                    validator: (value) =>
+                    value == null ? "Seleccione una especialidad" : null,
+                  ),
+                ),
               ),
-              const SizedBox(height: 10),
 
-              CheckboxListTile(
-                title: const Text("¿Desea activar recordatorio?"),
-                value: _recordatorio,
-                onChanged: (bool? value) {
-                  setState(() {
-                    _recordatorio = value ?? false;
-                  });
-                },
-                controlAffinity: ListTileControlAffinity.leading, // checkbox a la izquierda
+              const SizedBox(height: 15),
+
+              Center(
+                child: FractionallySizedBox(
+                  widthFactor: 0.8,
+                  child: CheckboxListTile(
+                    title: Text(
+                      "¿Desea activar recordatorio?",
+                      style: GoogleFonts.roboto(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
+                      ),
+                    ),
+                    value: model.recordatorio,
+                    onChanged: (bool? value) {
+                      setState(() {
+                        model.recordatorio = value ?? false;
+                      });
+                    },
+                    controlAffinity: ListTileControlAffinity.leading, // checkbox a la izquierda
+                  ),
+                ),
               ),
-
 
               const SizedBox(height: 30),
 
               // Botón Guardar
               ElevatedButton.icon(
-                onPressed: _guardarCita,
+                onPressed: () => model.guardarCita(context),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue.shade900,
                   foregroundColor: Colors.white,
@@ -259,22 +242,204 @@ class _CrearCitaState extends State<crearCita> {
     String? Function(String?)? validator,
     bool readOnly = false,
     VoidCallback? onTap,
-    int maxLines = 1,
+    IconAlignment iconAlignment = IconAlignment.end,
+    TextInputType keyboardType = TextInputType.text,
+    String? suffixText,
+    String? prefixText,
+    List<TextInputFormatter>? inputFormatters,
   }) {
-    return TextFormField(
-      controller: controller,
-      validator: validator,
-      readOnly: readOnly,
-      onTap: onTap,
-      maxLines: maxLines,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+    return FractionallySizedBox(
+      widthFactor: 0.80, // 80% del ancho del contenedor
+      child: TextFormField(
+        controller: controller,
+        validator: validator,
+        style: GoogleFonts.roboto(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          color: Colors.black,
+        ),
+        readOnly: readOnly,
+        keyboardType: keyboardType,
+        inputFormatters: inputFormatters,
+        onTap: onTap,
+        decoration: InputDecoration(
+          labelText: label,
+          suffixText: suffixText,
+          prefixText: prefixText,
+          prefixIcon: iconAlignment == IconAlignment.start
+              ? Icon(icon, color: AppTheme.primaryColor)
+              : null,
+          suffixIcon: iconAlignment == IconAlignment.end
+              ? Icon(icon, color: AppTheme.primaryColor)
+              : null,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
         ),
       ),
     );
   }
+
+  Future<void> _mostrarSelectorFecha(BuildContext context) async {
+    DateTime fechaSeleccionada = DateTime.now();
+
+    await showDialog(
+      context: context,
+      builder: (ctx) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              return Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      "Seleccionar fecha",
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    //Calendario
+                    CalendarDatePicker(
+                      initialDate: fechaSeleccionada,
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime(2100),
+                      onDateChanged: (newDate) {
+                        setState(() {
+                          fechaSeleccionada = newDate;
+                        });
+                      },
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    //Botones personalizados
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextButton(
+                            onPressed: () => Navigator.of(ctx).pop(),
+                            style: TextButton.styleFrom(
+                              padding:
+                              const EdgeInsets.symmetric(vertical: 10),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(24),
+                              ),
+                            ),
+                            child: const Text(
+                              "Cancelar",
+                              style: TextStyle(color: Colors.black87),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.of(ctx).pop(fechaSeleccionada);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue.shade900,
+                              foregroundColor: Colors.white,
+                              padding:
+                              const EdgeInsets.symmetric(vertical: 10),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(24),
+                              ),
+                            ),
+                            icon: const Icon(Icons.check),
+                            label: const Text("Aceptar"),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        );
+      },
+    ).then((fechaSeleccionadaFinal) {
+      if (fechaSeleccionadaFinal != null) {
+        model.fechaController.text =
+            model.fechaController.text =
+        "${fechaSeleccionadaFinal.year.toString().padLeft(4,'0')}/${fechaSeleccionadaFinal.month.toString().padLeft(2,'0')}/${fechaSeleccionadaFinal.day.toString().padLeft(2,'0')}";
+        setState(() {}); // Refrescar UI
+      }
+    });
+  }
+}
+
+// ------------------------
+// 1) Localizations personalizadas
+// ------------------------
+class CustomEnglishMaterialLocalizations extends DefaultMaterialLocalizations {
+  // título del diálogo
+  @override
+  String get timePickerDialHelpText => 'Seleccionar con reloj';
+
+  @override
+  String get dialModeButtonLabel => 'Modo reloj';
+
+  // texto del botón OK / aceptar
+  @override
+  String get okButtonLabel => 'Aceptar';
+
+  // texto del botón cancelar
+  @override
+  String get cancelButtonLabel => 'Cancelar';
+
+  // tooltip / label para cambiar a entrada por texto
+  @override
+  String get inputTimeModeButtonLabel => 'Introducir hora';
+
+  // texto usado en la cabecera cuando se está en modo input (teclado)
+  @override
+  String get timePickerInputHelpText => 'Introduzca la hora';
+
+  // mensaje de error cuando la hora ingresada no es válida (Input mode)
+  @override
+  String get invalidTimeLabel => 'Introduce una hora válida';
+
+  // abreviaciones AM/PM si quieres mostrarlas en español
+  @override
+  String get anteMeridiemAbbreviation => 'AM';
+
+  @override
+  String get postMeridiemAbbreviation => 'PM';
+
+  @override
+  String get timePickerHourLabel => 'Hora';
+
+  @override
+  String get timePickerMinuteLabel => 'Minutos';
+}
+
+// ------------------------
+// 2) Delegado para cargar la localización personalizada
+// ------------------------
+class _CustomEnglishMaterialLocalizationsDelegate
+    extends LocalizationsDelegate<MaterialLocalizations> {
+  const _CustomEnglishMaterialLocalizationsDelegate();
+
+  @override
+  bool isSupported(Locale locale) => locale.languageCode == 'en';
+
+  @override
+  Future<MaterialLocalizations> load(Locale locale) async {
+    return Future.value(CustomEnglishMaterialLocalizations());
+  }
+
+  @override
+  bool shouldReload(covariant LocalizationsDelegate<MaterialLocalizations> old) =>
+      false;
 }
 

@@ -30,6 +30,7 @@ class _CrearMedicamentoState extends State<crearMedicamento> {
           style: TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.bold,
+          fontSize: 24,
           ),
         ),
         iconTheme: const IconThemeData(
@@ -59,7 +60,7 @@ class _CrearMedicamentoState extends State<crearMedicamento> {
               // Campo Nombre
               _buildTextField(
                 controller: model.nombreMedicamentoController,
-                label: 'Nombre del medicamento',
+                label: 'Nombre',
                 icon: Icons.text_fields,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -132,7 +133,14 @@ class _CrearMedicamentoState extends State<crearMedicamento> {
                 child: FractionallySizedBox(
                   widthFactor: 0.8,
                   child: CheckboxListTile(
-                    title: const Text("¿Desea activar recordatorio?"),
+                    title: Text(
+                      "¿Desea activar recordatorio?",
+                      style: GoogleFonts.roboto(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
+                      ),
+                    ),
                     value: model.recordatorio,
                     onChanged: (bool? value) {
                       setState(() {
@@ -157,7 +165,7 @@ class _CrearMedicamentoState extends State<crearMedicamento> {
               if (model.recordatorio) ...[
                 _buildTextField(
                   controller: model.fechaController,
-                  label: 'Fecha (AÑO/MES/DIA)',
+                  label: 'Fecha',
                   icon: Icons.calendar_today,
                   readOnly: true,
                   onTap: () => _mostrarSelectorFecha(context),
