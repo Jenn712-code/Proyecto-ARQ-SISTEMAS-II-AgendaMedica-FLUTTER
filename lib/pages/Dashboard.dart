@@ -91,7 +91,7 @@ class _DashboardState extends State<Dashboard> {
     ),
 
     // Perfil con botón cerrar sesión
-    Perfil(model: model),
+    Perfil(model: model, nombreUsuario: '',),
   ];
 
   @override
