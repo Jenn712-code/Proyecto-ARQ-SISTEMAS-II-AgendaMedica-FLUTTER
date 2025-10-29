@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../controllers/DashboardModel.dart';
 import 'Home.dart';
-
-// =======================================================
-// WIDGET PRINCIPAL: PERFIL
-// =======================================================
+import 'Notificaciones.dart';
+import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class Perfil extends StatelessWidget {
   final DashboardModel model;
+  final String nombreUsuario = "Ana Ramirez";
+  final String correoUsuario = "ana@correo.com";
+  final Color primaryColor = Colors.teal;
+  //final String nombreUsuario;
+
+  //const Perfil({super.key, required this.model, required this.nombreUsuario});
 
   const Perfil({super.key, required this.model});
 
@@ -26,7 +30,6 @@ class Perfil extends StatelessWidget {
     );
   }
 
-  // Widget auxiliar para la información del usuario
   Widget _buildUserInfo(String nombre, String correo) {
     return Column(
       children: [
@@ -51,10 +54,6 @@ class Perfil extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const String nombreUsuario = "Ana Ramirez";
-    const String correoUsuario = "ana@correo.com";
-    final Color primaryColor = Colors.teal.shade400; // El color turquesa
-
     return Scaffold(
       /*appBar: AppBar(
         title: const SizedBox.shrink(), // Ocultar el título estándar
@@ -88,7 +87,6 @@ class Perfil extends StatelessWidget {
                     elevation: 1,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     child: ExpansionTile(
-                      // TÍTULO PRINCIPAL: CONFIGURACIONES
                       title: const Text(
                         "Configuraciones",
                         style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
@@ -97,14 +95,14 @@ class Perfil extends StatelessWidget {
                       initiallyExpanded: false,
 
                       children: <Widget>[
-                        // --- 1. RECORDATORIOS (SEGUNDO EXPANSION TILE) ---
+                        // ---- RECORDATORIOS ----
                         ExpansionTile(
                           title: const Text("Recordatorios"),
-                          leading: const Icon(Icons.notifications, color: Colors.blueAccent),
+                          leading: const Icon(Icons.notifications_active, color: Colors.blueAccent),
                           initiallyExpanded: false,
 
                           children: [
-                            // ITEM: Citas (Abre Pop-up con temporizador)
+                            // Citas
                             ListTile(
                               contentPadding: const EdgeInsets.only(left: 40, right: 16),
                               leading: const Icon(Icons.calendar_today, size: 20, color: Colors.green),
@@ -120,7 +118,8 @@ class Perfil extends StatelessWidget {
                                 );
                               },
                             ),
-                            // ITEM: Medicamentos (Abre Pop-up con temporizador)
+
+                            // Medicamentos
                             ListTile(
                               contentPadding: const EdgeInsets.only(left: 40, right: 16),
                               leading: const Icon(Icons.medical_services, size: 20, color: Colors.red),
@@ -138,7 +137,20 @@ class Perfil extends StatelessWidget {
                             ),
                           ],
                         ),
+
                         const Divider(height: 1, indent: 70, endIndent: 20),
+
+                        // ---- NOTIFICACIONES ----
+                        ListTile(
+                          leading: const Icon(Icons.notifications, color: Colors.blueGrey),
+                          title: const Text("Notificaciones"),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const Notificaciones()),
+                            );
+                          },
+                        ),
                       ],
                     ),
                   ),
@@ -177,6 +189,25 @@ class Perfil extends StatelessWidget {
       ),
     );
   }
+}
+
+
+// Popup para mostrar información o acciones
+void _mostrarPopup(BuildContext context, String titulo, String mensaje) {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Text(titulo, style: const TextStyle(fontWeight: FontWeight.bold)),
+      content: Text(mensaje),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text("Cerrar"),
+        ),
+      ],
+    ),
+  );
 }
 
 
