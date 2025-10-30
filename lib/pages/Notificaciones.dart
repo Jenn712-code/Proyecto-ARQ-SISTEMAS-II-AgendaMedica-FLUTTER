@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 import '../controllers/DashboardModel.dart';
 
-import 'package:flutter/material.dart';
-
-// Asegúrate de importar tu DashboardModel
-// import 'path_to_your_model/dashboard_model.dart';
 
 class Notificaciones extends StatefulWidget {
   const Notificaciones({super.key});
