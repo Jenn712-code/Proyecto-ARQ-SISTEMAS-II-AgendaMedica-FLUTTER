@@ -12,6 +12,7 @@ import 'Home.dart';
 import 'Notificaciones.dart';
 import 'package:flutter/services.dart';
 
+
 class Perfil extends StatefulWidget {
   final DashboardModel model;
   const Perfil({super.key, required this.model});
@@ -25,71 +26,122 @@ class _PerfilState extends State<Perfil> {
   String correoUsuario = "Cargando...";
   String _configMedicamento = "";
   String _configCita = "";
+  late TextEditingController _daysController;
+  late TextEditingController _hoursController;
+  late TextEditingController _minutesController;
+  String? token;
   final Color primaryColor = Colors.teal;
 
   @override
   void initState() {
     super.initState();
+    _daysController = TextEditingController();
+    _hoursController = TextEditingController();
+    _minutesController = TextEditingController();
     _cargarDatosUsuario();
-    //_cargarRecordatorio(tipoServicioId, cedulaPaciente);
+    // Mostrar mensaje de carga inicial
+    setState(() {
+      _configCita = "Cargando...";
+      _configMedicamento = "Cargando...";
+    });
+  }
+
+  Future<void> _initToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    token = prefs.getString('token');
   }
 
   Future<void> _cargarDatosUsuario() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
+
+    await _initToken();
 
     if (token != null) {
-      Map<String, dynamic> decodedToken = JwtDecoder.decode(token);
+      Map<String, dynamic> decodedToken = JwtDecoder.decode(token!);
 
       setState(() {
         nombreUsuario = decodedToken['name'] ?? decodedToken['nombre'] ?? 'Usuario';
         correoUsuario = decodedToken['email'] ?? decodedToken['upn'] ?? 'correo@desconocido.com';
       });
+      final cedula = decodedToken['cedula']?.toString() ?? '';
+      await _cargarRecordatorioCita(cedula);
+      await _cargarRecordatorioMedicamento(cedula);
     }
   }
 
-  /*Future<void> _cargarRecordatorio(int tipoServicioId, String cedula) async {
+  Future<void> _cargarRecordatorio(int tipoServicioId, String cedula) async {
     try {
       final response = await http.get(
-          Uri.parse("${ApiConfig.baseUrl}/recordatorios/buscar/$tipoServicioId/$cedula"),
+        Uri.parse("${ApiConfig.baseUrl}/recordatorios/cargarRecordatorio/$tipoServicioId/$cedula"),
         headers: {
-          'Authorization': 'Bearer $token',
+          'Authorization': 'Bearer ${token ?? ''}',
           'Content-Type': 'application/json',
         },
       );
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 && response.body.isNotEmpty) {
         final data = jsonDecode(response.body);
 
+        final dias = data['dias'] ?? 0;
+        final horas = data['horas'] ?? 0;
+        final minutos = data['minutos'] ?? 0;
+
+        // Construir texto limpio (omitimos valores en cero)
+        String configTexto = "";
+        if (dias > 0) configTexto += "$dias d ";
+        if (horas > 0) configTexto += "$horas h ";
+        if (minutos > 0) configTexto += "$minutos min";
+
+        if (configTexto.trim().isEmpty) {
+          configTexto = "No Configurado";
+        } else {
+          configTexto = configTexto.trim();
+        }
+
         setState(() {
-          _daysController.text = data['dias'].toString();
-          _hoursController.text = data['horas'].toString();
-          _minutesController.text = data['minutos'].toString();
-
-          // Mostrar texto del recordatorio configurado
-          _configCita =
-          '${data['dias']} días, ${data['horas']} horas, ${data['minutos']} minutos';
+          if (tipoServicioId == 1) {
+            _daysController.text = dias.toString();
+            _hoursController.text = horas.toString();
+            _minutesController.text = minutos.toString();
+            _configCita = configTexto;
+          } else if (tipoServicioId == 2) {
+            _configMedicamento = configTexto;
+          }
         });
-
       } else if (response.statusCode == 404) {
         // No hay recordatorio configurado
         setState(() {
-          _daysController.clear();
-          _hoursController.clear();
-          _minutesController.clear();
-          _configCita = "No Configurado";
+          if (tipoServicioId == 1) {
+            _daysController.clear();
+            _hoursController.clear();
+            _minutesController.clear();
+            _configCita = "No Configurado";
+          } else if (tipoServicioId == 2) {
+            _configMedicamento = "No Configurado";
+          }
         });
       } else {
         throw Exception('Error al obtener el recordatorio: ${response.body}');
       }
     } catch (e) {
       setState(() {
-        _configCita = "No Configurado";
+        if (tipoServicioId == 1) {
+          _configCita = "No Configurado";
+        } else if (tipoServicioId == 2) {
+          _configMedicamento = "No Configurado";
+        }
       });
-      print("Error: $e");
+      print("Error al cargar recordatorio (tipo $tipoServicioId): $e");
     }
-  }*/
+  }
 
+
+  Future<void> _cargarRecordatorioCita(String cedula) async {
+    await _cargarRecordatorio(1, cedula); // tipoServicioId = 1 para cita
+  }
+
+  Future<void> _cargarRecordatorioMedicamento(String cedula) async {
+    await _cargarRecordatorio(2, cedula); // tipoServicioId = 2 para medicamento
+  }
 
   Future<void> showDialogCustom(BuildContext context, String title, String message) async {
     return showDialog(
@@ -191,21 +243,22 @@ class _PerfilState extends State<Perfil> {
   Widget _buildUserInfo(String nombre, String correo) {
     return Column(
       children: [
-        const Icon(
-          Icons.account_circle,
-          size: 80,
-          color: Colors.grey,
+        Image.asset(
+          'assets/images/medico.png',
+          width: 130,
+          height: 130,
+          fit: BoxFit.cover,
         ),
         const SizedBox(height: 10),
         Text(
           nombre,
-          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
         ),
         Text(
           correo,
-          style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+          style: const TextStyle(fontSize: 16, color: Colors.black),
         ),
-        const SizedBox(height: 30),
+        const SizedBox(height: 20),
       ],
     );
   }
@@ -231,25 +284,29 @@ class _PerfilState extends State<Perfil> {
                     elevation: 1,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     child: ExpansionTile(
-                      title: const Text(
+                      title: Text(
                         "Configuraciones",
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+                        style: AppTheme.snapStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
                       ),
-                      leading: Icon(Icons.settings, color: primaryColor),
+                      leading: const Icon(Icons.settings, color: AppTheme.secondaryColor),
                       initiallyExpanded: false,
 
                       children: <Widget>[
                         // ---- RECORDATORIOS ----
                         ExpansionTile(
                           title: const Text("Recordatorios"),
-                          leading: const Icon(Icons.notifications_active, color: Colors.blueAccent),
+                          leading: const Icon(Icons.notifications_active, color: AppTheme.secondaryColor),
                           initiallyExpanded: false,
 
                           children: [
                             // Citas
                             ListTile(
                               contentPadding: const EdgeInsets.only(left: 40, right: 16),
-                              leading: const Icon(Icons.calendar_today, size: 20, color: Colors.green),
+                              leading: const Icon(Icons.calendar_today, size: 20, color: AppTheme.primaryColor),
                               title: const Text("Citas"),
                               trailing: Text(
                                 _configCita.isEmpty ? "No configurado" : _configCita,
@@ -301,7 +358,7 @@ class _PerfilState extends State<Perfil> {
                             // Medicamentos
                             ListTile(
                               contentPadding: const EdgeInsets.only(left: 40, right: 16),
-                              leading: const Icon(Icons.medical_services, size: 20, color: Colors.red),
+                              leading: const Icon(Icons.medical_services, size: 20, color: AppTheme.primaryColor),
                               title: const Text("Medicamentos"),
                               trailing: Text(
                                 _configMedicamento.isEmpty ? "No configurado" : _configMedicamento,
@@ -350,25 +407,33 @@ class _PerfilState extends State<Perfil> {
                             ),
                           ],
                         ),
-
-                        const Divider(height: 1, indent: 70, endIndent: 20),
-
-                        // ---- NOTIFICACIONES ----
-                        ListTile(
-                          leading: const Icon(Icons.notifications, color: Colors.blueGrey),
-                          title: const Text("Notificaciones"),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => const Notificaciones()),
-                            );
-                          },
-                        ),
                       ],
                     ),
                   ),
+                  // ---- NOTIFICACIONES ----
+                  Card(
+                    elevation: 1,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    child: ListTile(
+                      leading: const Icon(Icons.notifications, color: AppTheme.secondaryColor),
+                      title: Text(
+                        "Notificaciones",
+                        style: AppTheme.snapStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const Notificaciones()),
+                        );
+                      },
+                    ),
+                  ),
 
-                  const SizedBox(height: 50),
+                  const SizedBox(height: 20),
 
                   // --- Botón de Cerrar Sesión ---
                   ElevatedButton.icon(
@@ -492,7 +557,7 @@ class _ReminderConfigDialogState extends State<ReminderConfigDialog> {
         String h = _hoursController.text.trim();
         String m = _minutesController.text.trim();
 
-        // 🔹 Si todos están vacíos o en "0" → error general
+        // Si todos están vacíos o en "0" → error general
         if ((d.isEmpty || d == "0") &&
             (h.isEmpty || h == "0") &&
             (m.isEmpty || m == "0")) {
@@ -501,7 +566,7 @@ class _ReminderConfigDialogState extends State<ReminderConfigDialog> {
           return;
         }
 
-        // 🔹 Valida solo los que tienen texto distinto de vacío y distinto de 0
+        // Valida solo los que tienen texto distinto de vacío y distinto de 0
         if (d.isNotEmpty && d != "0") {
           _daysError = _validateValue('Días', d);
         }
@@ -515,14 +580,14 @@ class _ReminderConfigDialogState extends State<ReminderConfigDialog> {
       } else if (widget.tipo == "Medicamento") {
         String m = _minutesController.text.trim();
 
-        // 🔹 Si está vacío o es "0" → error general
+        // Si está vacío o es "0" → error general
         if (m.isEmpty || m == "0") {
           _generalError =
           "Por favor ingresa un valor mayor que 0 en minutos.";
           return;
         }
 
-        // 🔹 Si tiene valor, lo valida normalmente
+        // Si tiene valor, lo valida normalmente
         _minutesError = _validateValue('Minutos', m);
       }
     });
@@ -536,9 +601,8 @@ class _ReminderConfigDialogState extends State<ReminderConfigDialog> {
 
   // Widget para construir un campo de entrada (Días, Horas, Minutos)
   Widget _buildTimeField(String label, TextEditingController controller,
-    String? errorText, Function(int) onChanged) {
+      String? errorText, Function(int) onChanged) {
     int maxDigits = _maxDigits[label]!;
-
     return Column(
       children: [
         Text(label, style: const TextStyle(fontSize: 14, color: AppTheme.primaryColor)),
