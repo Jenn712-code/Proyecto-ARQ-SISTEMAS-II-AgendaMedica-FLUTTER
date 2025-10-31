@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_agenda_medica/pages/crearCita.dart';
 import 'package:flutter_agenda_medica/pages/crearMedicamento.dart';
+
+// 🎯 Widgets de Dashboard con pestañas
+import 'CitasDashboardConTabs.dart';
+import 'MedicamentosDashboardConTabs.dart';
+
 import '../controllers/DashboardModel.dart';
 import '../theme/AppTheme.dart';
 import 'Perfil.dart';
@@ -44,53 +49,16 @@ class _DashboardState extends State<Dashboard> {
 
   // Lista de pantallas que vas a mostrar en el dashboard
   late final List<Widget> _pages = [
+    // 0. Inicio
     const Center(child: Text("Inicio")),
 
-    // Página de Citas con botón
-    Center(
-      child: ElevatedButton.icon(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const crearCita()),
-          );
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppTheme.primaryColor,
-          foregroundColor: Colors.white,
-          minimumSize: const Size(215, 47),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-        ),
-        icon: const Icon(Icons.add, size: 20),
-        label: const Text("Crear cita"),
-      ),
-    ),
+    // 1. Citas (AHORA USA EL WIDGET CON EL TAB BAR)
+    const CitasDashboardConTabs(),
 
-    // Página de Medicamentos con botón
-    Center(
-      child: ElevatedButton.icon(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const crearMedicamento()),
-          );
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppTheme.primaryColor,
-          foregroundColor: Colors.white,
-          minimumSize: const Size(215, 47),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-        ),
-        icon: const Icon(Icons.add, size: 20),
-        label: const Text("Crear medicamento"),
-      ),
-    ),
+    // 2. Medicamentos (AHORA USA EL WIDGET CON EL TAB BAR)
+    const MedicamentosDashboardConTabs(),
 
-    // Perfil con botón cerrar sesión
+    // 3. Perfil
     Perfil(model: model),
   ];
 
@@ -103,13 +71,17 @@ class _DashboardState extends State<Dashboard> {
         title: Text(
           _titles[_selectedIndex],
           style: const TextStyle(
-          color: AppTheme.primaryColor,
-          fontWeight: FontWeight.bold,
+            color: AppTheme.primaryColor,
+            fontWeight: FontWeight.bold,
           ),
         ),
         backgroundColor: AppTheme.secondaryColor,
       ),
+
+      // Muestra la página seleccionada
       body: _pages[_selectedIndex],
+
+      // Barra de navegación inferior
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
@@ -137,4 +109,3 @@ class _DashboardState extends State<Dashboard> {
     );
   }
 }
-

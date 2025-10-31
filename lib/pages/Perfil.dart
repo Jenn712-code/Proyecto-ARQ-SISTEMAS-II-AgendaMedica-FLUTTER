@@ -1,78 +1,274 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
+import 'package:jwt_decoder/jwt_decoder.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../config/api_config.dart';
 import '../controllers/DashboardModel.dart';
+import '../theme/AppTheme.dart';
 import 'Home.dart';
+import 'Notificaciones.dart';
+import 'package:flutter/services.dart';
 
-// =======================================================
-// WIDGET PRINCIPAL: PERFIL
-// =======================================================
 
-class Perfil extends StatelessWidget {
+class Perfil extends StatefulWidget {
   final DashboardModel model;
-
   const Perfil({super.key, required this.model});
 
-  // Widget auxiliar para recrear el título estilizado (color y tipografía)
-  Widget _buildStyledTitle(String title, Color color) {
-    return Text(
-      title,
-      style: GoogleFonts.getFont(
-        'Pacifico',
-        color: color,
-        fontSize: 32,
-        fontWeight: FontWeight.bold,
+  @override
+  State<Perfil> createState() => _PerfilState();
+}
+
+class _PerfilState extends State<Perfil> {
+  String nombreUsuario = "Cargando...";
+  String correoUsuario = "Cargando...";
+  String _configMedicamento = "";
+  String _configCita = "";
+  late TextEditingController _daysController;
+  late TextEditingController _hoursController;
+  late TextEditingController _minutesController;
+  String? token;
+  final Color primaryColor = Colors.teal;
+
+  @override
+  void initState() {
+    super.initState();
+    _daysController = TextEditingController();
+    _hoursController = TextEditingController();
+    _minutesController = TextEditingController();
+    _cargarDatosUsuario();
+    // Mostrar mensaje de carga inicial
+    setState(() {
+      _configCita = "Cargando...";
+      _configMedicamento = "Cargando...";
+    });
+  }
+
+  Future<void> _initToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    token = prefs.getString('token');
+  }
+
+  Future<void> _cargarDatosUsuario() async {
+
+    await _initToken();
+
+    if (token != null) {
+      Map<String, dynamic> decodedToken = JwtDecoder.decode(token!);
+
+      setState(() {
+        nombreUsuario = decodedToken['name'] ?? decodedToken['nombre'] ?? 'Usuario';
+        correoUsuario = decodedToken['email'] ?? decodedToken['upn'] ?? 'correo@desconocido.com';
+      });
+      final cedula = decodedToken['cedula']?.toString() ?? '';
+      await _cargarRecordatorioCita(cedula);
+      await _cargarRecordatorioMedicamento(cedula);
+    }
+  }
+
+  Future<void> _cargarRecordatorio(int tipoServicioId, String cedula) async {
+    try {
+      final response = await http.get(
+        Uri.parse("${ApiConfig.baseUrl}/recordatorios/cargarRecordatorio/$tipoServicioId/$cedula"),
+        headers: {
+          'Authorization': 'Bearer ${token ?? ''}',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200 && response.body.isNotEmpty) {
+        final data = jsonDecode(response.body);
+
+        final dias = data['dias'] ?? 0;
+        final horas = data['horas'] ?? 0;
+        final minutos = data['minutos'] ?? 0;
+
+        // Construir texto limpio (omitimos valores en cero)
+        String configTexto = "";
+        if (dias > 0) configTexto += "$dias d ";
+        if (horas > 0) configTexto += "$horas h ";
+        if (minutos > 0) configTexto += "$minutos min";
+
+        if (configTexto.trim().isEmpty) {
+          configTexto = "No Configurado";
+        } else {
+          configTexto = configTexto.trim();
+        }
+
+        setState(() {
+          if (tipoServicioId == 1) {
+            _daysController.text = dias.toString();
+            _hoursController.text = horas.toString();
+            _minutesController.text = minutos.toString();
+            _configCita = configTexto;
+          } else if (tipoServicioId == 2) {
+            _configMedicamento = configTexto;
+          }
+        });
+      } else if (response.statusCode == 404) {
+        // No hay recordatorio configurado
+        setState(() {
+          if (tipoServicioId == 1) {
+            _daysController.clear();
+            _hoursController.clear();
+            _minutesController.clear();
+            _configCita = "No Configurado";
+          } else if (tipoServicioId == 2) {
+            _configMedicamento = "No Configurado";
+          }
+        });
+      } else {
+        throw Exception('Error al obtener el recordatorio: ${response.body}');
+      }
+    } catch (e) {
+      setState(() {
+        if (tipoServicioId == 1) {
+          _configCita = "No Configurado";
+        } else if (tipoServicioId == 2) {
+          _configMedicamento = "No Configurado";
+        }
+      });
+      print("Error al cargar recordatorio (tipo $tipoServicioId): $e");
+    }
+  }
+
+
+  Future<void> _cargarRecordatorioCita(String cedula) async {
+    await _cargarRecordatorio(1, cedula); // tipoServicioId = 1 para cita
+  }
+
+  Future<void> _cargarRecordatorioMedicamento(String cedula) async {
+    await _cargarRecordatorio(2, cedula); // tipoServicioId = 2 para medicamento
+  }
+
+  Future<void> showDialogCustom(BuildContext context, String title, String message) async {
+    return showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          title,
+          textAlign: TextAlign.center,
+          style: AppTheme.snapStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.primaryColor,
+          ),
+        ),
+        content: Text(
+          message,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.roboto(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Colors.black,
+          ),
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(
+            style: TextButton.styleFrom(
+              backgroundColor: AppTheme.primaryColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            ),
+            onPressed: () => Navigator.pop(ctx),
+            child: Text("OK", style: GoogleFonts.roboto(fontSize: 14, fontWeight: FontWeight.w600)),
+          ),
+        ],
       ),
     );
   }
 
-  // Widget auxiliar para la información del usuario
+  FutureOr<bool> guardarRecordatorio(BuildContext context, {
+    required int dias,
+    required int horas,
+    required int minutos,
+    required int tipoServicioId,
+  }) async {
+    try {
+
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token == null) {
+        await showDialogCustom(context, "Error", "Sesión no encontrada. Inicia sesión nuevamente.");
+        return false;
+      }
+
+      //Conversión
+      final int totalMinutos = (dias * 24 * 60) + (horas * 60) + minutos;
+
+      final recordatorio = {
+        "tipoServicio": tipoServicioId,
+        "recAnticipacion": totalMinutos,
+        "recUnidadTiempo": "minutos" //siempre se envía "minutos"
+      };
+
+      final url = Uri.parse("${ApiConfig.baseUrl}/recordatorios/configurarRecordatorio");
+      final response = await http.post(
+        url,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+        body: jsonEncode(recordatorio),
+      );
+
+      if (response.statusCode == 201) {
+        await showDialogCustom(context, "Éxito", "Recordatorio guardado con éxito");
+        return true;
+      } else if (response.statusCode == 401) {
+        await showDialogCustom(context, "Sesión expirada", "Tu sesión ha caducado. Inicia sesión nuevamente.");
+        await prefs.clear();
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomePage()),
+        );
+        return false;
+      } else {
+        await showDialogCustom(context, "Error", "Error al guardar recordatorio: ${response.body}");
+        return false;
+      }
+    } catch (e) {
+      await showDialogCustom(context, "Error inesperado", "Ocurrió un error inesperado: $e");
+      return false;
+    }
+  }
+
   Widget _buildUserInfo(String nombre, String correo) {
     return Column(
       children: [
-        const Icon(
-          Icons.account_circle,
-          size: 80,
-          color: Colors.grey,
+        Image.asset(
+          'assets/images/medico.png',
+          width: 130,
+          height: 130,
+          fit: BoxFit.cover,
         ),
         const SizedBox(height: 10),
         Text(
           nombre,
-          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
         ),
         Text(
           correo,
-          style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+          style: const TextStyle(fontSize: 16, color: Colors.black),
         ),
-        const SizedBox(height: 30),
+        const SizedBox(height: 20),
       ],
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    const String nombreUsuario = "Ana Ramirez";
-    const String correoUsuario = "ana@correo.com";
-    final Color primaryColor = Colors.teal.shade400; // El color turquesa
-
     return Scaffold(
-      /*appBar: AppBar(
-        title: const SizedBox.shrink(), // Ocultar el título estándar
-        backgroundColor: primaryColor,
-      ),*/
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // --- Barra Superior con Título Estilizado Único ---
-            /*Container(
-              width: double.infinity,
-              padding: const EdgeInsets.only(top: 10, bottom: 20),
-              color: primaryColor,
-              child: Center(
-                child: _buildStyledTitle("Perfil", Colors.white),
-              ),
-            ),*/
-
             // --- Contenido del Perfil ---
             Padding(
               padding: const EdgeInsets.all(16.0),
@@ -88,67 +284,161 @@ class Perfil extends StatelessWidget {
                     elevation: 1,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     child: ExpansionTile(
-                      // TÍTULO PRINCIPAL: CONFIGURACIONES
-                      title: const Text(
+                      title: Text(
                         "Configuraciones",
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+                        style: AppTheme.snapStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
                       ),
-                      leading: Icon(Icons.settings, color: primaryColor),
+                      leading: const Icon(Icons.settings, color: AppTheme.secondaryColor),
                       initiallyExpanded: false,
 
                       children: <Widget>[
-                        // --- 1. RECORDATORIOS (SEGUNDO EXPANSION TILE) ---
+                        // ---- RECORDATORIOS ----
                         ExpansionTile(
                           title: const Text("Recordatorios"),
-                          leading: const Icon(Icons.notifications, color: Colors.blueAccent),
+                          leading: const Icon(Icons.notifications_active, color: AppTheme.secondaryColor),
                           initiallyExpanded: false,
 
                           children: [
-                            // ITEM: Citas (Abre Pop-up con temporizador)
+                            // Citas
                             ListTile(
                               contentPadding: const EdgeInsets.only(left: 40, right: 16),
-                              leading: const Icon(Icons.calendar_today, size: 20, color: Colors.green),
+                              leading: const Icon(Icons.calendar_today, size: 20, color: AppTheme.primaryColor),
                               title: const Text("Citas"),
-                              onTap: () {
-                                showDialog(
+                              trailing: Text(
+                                _configCita.isEmpty ? "No configurado" : _configCita,
+                                style: const TextStyle(color: AppTheme.primaryColor, fontSize: 14),
+                              ),
+                              onTap: () async {
+                                final result = await showDialog<Map<String, dynamic>>(
                                   context: context,
                                   builder: (BuildContext context) {
                                     return const ReminderConfigDialog(
-                                      title: "Configuración de Recordatorio de Citas",
+                                      title: "Recordatorio de Citas",
+                                      tipo: 'Cita',
                                     );
                                   },
                                 );
+
+                                //Si el usuario presionó "Aceptar"
+                                if (result != null) {
+                                  final dias = result['dias'] ?? 0;
+                                  final horas = result['horas'] ?? 0;
+                                  final minutos = result['minutos'] ?? 0;
+                                  final tipoServicioId = result['tipoServicioId'] ?? 2;
+
+                                  bool success = await guardarRecordatorio(
+                                    context,
+                                    dias: dias,
+                                    horas: horas,
+                                    minutos: minutos,
+                                    tipoServicioId: tipoServicioId,
+                                  );
+
+                                  if (success) {
+                                    setState(() {
+                                      String texto = "";
+                                      if (dias > 0) texto += "$dias d ";
+                                      if (horas > 0) texto += "$horas h ";
+                                      if (minutos > 0) texto += "$minutos min";
+                                      _configCita = texto.trim().isEmpty ? "No configurado" : texto.trim();
+                                    });
+                                  } else {
+                                    setState(() {
+                                      _configCita = "No configurado";
+                                    });
+                                  }
+                                }
                               },
                             ),
-                            // ITEM: Medicamentos (Abre Pop-up con temporizador)
+
+                            // Medicamentos
                             ListTile(
                               contentPadding: const EdgeInsets.only(left: 40, right: 16),
-                              leading: const Icon(Icons.medical_services, size: 20, color: Colors.red),
+                              leading: const Icon(Icons.medical_services, size: 20, color: AppTheme.primaryColor),
                               title: const Text("Medicamentos"),
-                              onTap: () {
-                                showDialog(
+                              trailing: Text(
+                                _configMedicamento.isEmpty ? "No configurado" : _configMedicamento,
+                                style: const TextStyle(color: AppTheme.primaryColor, fontSize: 14),
+                              ),
+                              onTap: () async {
+                                final result = await showDialog<Map<String, dynamic>>(
                                   context: context,
                                   builder: (BuildContext context) {
                                     return const ReminderConfigDialog(
-                                      title: "Configuración de Recordatorio de Medicamentos",
+                                      title: "Recordatorio de Medicamentos",
+                                      tipo: 'Medicamento',
                                     );
                                   },
                                 );
+
+                                if (result != null) {
+                                  final dias = result['dias'] ?? 0;
+                                  final horas = result['horas'] ?? 0;
+                                  final minutos = result['minutos'] ?? 0;
+                                  final tipoServicioId = result['tipoServicioId'] ?? 2;
+
+                                  bool success = await guardarRecordatorio(
+                                    context,
+                                    dias: dias,
+                                    horas: horas,
+                                    minutos: minutos,
+                                    tipoServicioId: tipoServicioId,
+                                  );
+
+                                  if (success) {
+                                    setState(() {
+                                      String texto = "";
+                                      if (dias > 0) texto += "$dias d ";
+                                      if (horas > 0) texto += "$horas h ";
+                                      if (minutos > 0) texto += "$minutos min";
+                                      _configMedicamento = texto.trim().isEmpty ? "No configurado" : texto.trim();
+                                    });
+                                  } else {
+                                    setState(() {
+                                      _configMedicamento = "No configurado";
+                                    });
+                                  }
+                                }
                               },
                             ),
                           ],
                         ),
-                        const Divider(height: 1, indent: 70, endIndent: 20),
                       ],
                     ),
                   ),
+                  // ---- NOTIFICACIONES ----
+                  Card(
+                    elevation: 1,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    child: ListTile(
+                      leading: const Icon(Icons.notifications, color: AppTheme.secondaryColor),
+                      title: Text(
+                        "Notificaciones",
+                        style: AppTheme.snapStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const Notificaciones()),
+                        );
+                      },
+                    ),
+                  ),
 
-                  const SizedBox(height: 50),
+                  const SizedBox(height: 20),
 
                   // --- Botón de Cerrar Sesión ---
                   ElevatedButton.icon(
                     onPressed: () {
-                      model.showLogoutDialog(context, () {
+                      widget.model.showLogoutDialog(context, () {
                         Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(builder: (context) => const HomePage()),
@@ -179,14 +469,14 @@ class Perfil extends StatelessWidget {
   }
 }
 
-
 // =======================================================
 // WIDGET DEL POP-UP: TEMPORIZADOR (ReminderConfigDialog)
 // =======================================================
 
 class ReminderConfigDialog extends StatefulWidget {
   final String title;
-  const ReminderConfigDialog({super.key, required this.title});
+  final String tipo;
+  const ReminderConfigDialog({super.key, required this.title, required this.tipo  });
 
   @override
   State<ReminderConfigDialog> createState() => _ReminderConfigDialogState();
@@ -194,33 +484,36 @@ class ReminderConfigDialog extends StatefulWidget {
 
 class _ReminderConfigDialogState extends State<ReminderConfigDialog> {
   // Variables para manejar la configuración del temporizador
-  int _days = 0;
-  int _hours = 0;
-  int _minutes = 0;
+  int _days = 0,
+      _hours = 0,
+      _minutes = 0;
 
   // Controladores de texto
-  final TextEditingController _daysController = TextEditingController(text: '0');
-  final TextEditingController _hoursController = TextEditingController(text: '0');
-  final TextEditingController _minutesController = TextEditingController(text: '0');
+  final TextEditingController _daysController = TextEditingController(text: '');
+  final TextEditingController _hoursController = TextEditingController(text: '');
+  final TextEditingController _minutesController = TextEditingController(text: '');
 
   // Variables de estado para el mensaje de error de cada campo
-  String? _daysError;
-  String? _hoursError;
-  String? _minutesError;
+  String? _daysError, _hoursError, _minutesError;
+  int? tipoServicioId;
 
   // Mapa de límites estrictos
   final Map<String, int> _limits = {
-    'Días': 3,    // Máximo 3 días
-    'Horas': 23,  // Máximo 23 horas
+    'Días': 3, // Máximo 3 días
+    'Horas': 23, // Máximo 23 horas
     'Minutos': 30, // Máximo 30 minutos
+  };
+
+  // Límites de dígitos por campo
+  final Map<String, int> _maxDigits = {
+    'Días': 1,
+    'Horas': 2,
+    'Minutos': 2,
   };
 
   @override
   void initState() {
     super.initState();
-    _daysController.text = _days.toString();
-    _hoursController.text = _hours.toString();
-    _minutesController.text = _minutes.toString();
   }
 
   @override
@@ -233,6 +526,8 @@ class _ReminderConfigDialogState extends State<ReminderConfigDialog> {
 
   // Método de validación de un campo individual
   String? _validateValue(String fieldName, String value) {
+    if (value.isEmpty) return null;
+
     int? numericValue = int.tryParse(value);
     int max = _limits[fieldName]!;
 
@@ -245,48 +540,97 @@ class _ReminderConfigDialogState extends State<ReminderConfigDialog> {
     return null;
   }
 
+  String? _generalError;
+
   // Método de validación de todos los campos al presionar Aceptar
   bool _validateFields() {
-    bool isValid = true;
     setState(() {
-      _daysError = _validateValue('Días', _daysController.text);
-      _hoursError = _validateValue('Horas', _hoursController.text);
-      _minutesError = _validateValue('Minutos', _minutesController.text);
+      // Limpia errores previos
+      _daysError = null;
+      _hoursError = null;
+      _minutesError = null;
+      _generalError = null;
 
-      if (_daysError != null || _hoursError != null || _minutesError != null) {
-        isValid = false;
+      if (widget.tipo == "Cita") {
+        // Obtiene los valores de los controladores y elimina espacios
+        String d = _daysController.text.trim();
+        String h = _hoursController.text.trim();
+        String m = _minutesController.text.trim();
+
+        // Si todos están vacíos o en "0" → error general
+        if ((d.isEmpty || d == "0") &&
+            (h.isEmpty || h == "0") &&
+            (m.isEmpty || m == "0")) {
+          _generalError =
+          "Por favor llena al menos un campo con un valor válido";
+          return;
+        }
+
+        // Valida solo los que tienen texto distinto de vacío y distinto de 0
+        if (d.isNotEmpty && d != "0") {
+          _daysError = _validateValue('Días', d);
+        }
+        if (h.isNotEmpty && h != "0") {
+          _hoursError = _validateValue('Horas', h);
+        }
+        if (m.isNotEmpty && m != "0") {
+          _minutesError = _validateValue('Minutos', m);
+        }
+
+      } else if (widget.tipo == "Medicamento") {
+        String m = _minutesController.text.trim();
+
+        // Si está vacío o es "0" → error general
+        if (m.isEmpty || m == "0") {
+          _generalError =
+          "Por favor ingresa un valor mayor que 0 en minutos.";
+          return;
+        }
+
+        // Si tiene valor, lo valida normalmente
+        _minutesError = _validateValue('Minutos', m);
       }
     });
-    return isValid;
+
+    // Retorna true solo si no hay errores
+    return _generalError == null &&
+        _daysError == null &&
+        _hoursError == null &&
+        _minutesError == null;
   }
 
   // Widget para construir un campo de entrada (Días, Horas, Minutos)
-  Widget _buildTimeField(String label, TextEditingController controller, String? errorText, Function(int) onChanged) {
-    int max = _limits[label]!;
-
+  Widget _buildTimeField(String label, TextEditingController controller,
+      String? errorText, Function(int) onChanged) {
+    int maxDigits = _maxDigits[label]!;
     return Column(
       children: [
-        Text(label, style: const TextStyle(fontSize: 14, color: Colors.grey)),
+        Text(label, style: const TextStyle(fontSize: 14, color: AppTheme.primaryColor)),
         SizedBox(
-          width: 70, // Espacio para el error
+          width: 70,
           child: TextFormField(
             controller: controller,
             keyboardType: TextInputType.number,
             textAlign: TextAlign.center,
             decoration: InputDecoration(
               border: const OutlineInputBorder(),
-              contentPadding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
-              errorText: errorText, // Muestra el mensaje de error
+              contentPadding: const EdgeInsets.symmetric(
+                  vertical: 8.0, horizontal: 4.0),
+              errorText: errorText, // Solo muestra error si se excede
             ),
-            // Restringe la entrada solo a dígitos
             inputFormatters: <TextInputFormatter>[
+              LengthLimitingTextInputFormatter(maxDigits),
               FilteringTextInputFormatter.digitsOnly,
             ],
             onChanged: (value) {
+              if (value.isEmpty) {
+                onChanged(0);
+                return;
+              }
               int? numericValue = int.tryParse(value);
-              // Si el valor es válido y está dentro del rango estricto, actualiza el estado local
-              if (numericValue != null && numericValue >= 0 && numericValue <= max) {
+              if (numericValue != null) {
                 onChanged(numericValue);
+                setState(() {});
               }
             },
           ),
@@ -298,46 +642,153 @@ class _ReminderConfigDialogState extends State<ReminderConfigDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(widget.title),
+      title: Text(
+        widget.title,
+        textAlign: TextAlign.center,
+        style: AppTheme.snapStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          color: AppTheme.primaryColor,
+        ),
+      ),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text("Configurar el recordatorio con anticipación:", style: TextStyle(fontWeight: FontWeight.w600)),
-            const SizedBox(height: 15),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildTimeField("Días", _daysController, _daysError, (val) => setState(() => _days = val)),
-                _buildTimeField("Horas", _hoursController, _hoursError, (val) => setState(() => _hours = val)),
-                _buildTimeField("Minutos", _minutesController, _minutesError, (val) => setState(() => _minutes = val)),
+            if (widget.tipo == "Cita") ...[
+              const SizedBox(height: 15),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildTimeField("Días", _daysController, _daysError, (val) => _days = val),
+                  _buildTimeField("Horas", _hoursController, _hoursError, (val) => _hours = val),
+                  _buildTimeField("Minutos", _minutesController, _minutesError, (val) => _minutes = val),
+                ],
+              ),
+
+              if (_generalError != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: Text(
+                    _generalError!,
+                    style: GoogleFonts.roboto(
+                      color: Colors.red,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              const SizedBox(height: 25),
+              Text(
+                'Recordatorio: '
+                    '${_daysController.text.isEmpty ? 0 : _days} días, '
+                    '${_hoursController.text.isEmpty ? 0 : _hours} horas, '
+                    '${_minutesController.text.isEmpty
+                    ? 0
+                    : _minutes} minutos',
+                style: GoogleFonts.roboto(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black,
+                ),
+              ),
+            ] else
+              if (widget.tipo == "Medicamento") ...[
+                _buildTimeField('Minutos', _minutesController, _minutesError, (v) =>
+                _minutes = v),
+
+                if (_generalError != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Text(
+                      _generalError!,
+                      style: GoogleFonts.roboto(
+                        color: Colors.red,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                const SizedBox(height: 25),
+                Text(
+                  'Recordatorio: ${_minutesController.text.isEmpty
+                      ? 0
+                      : _minutes} minutos',
+                  style: GoogleFonts.roboto(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black,
+                  ),
+                ),
               ],
-            ),
-            const SizedBox(height: 15),
-            Text('Configuración: $_days días, $_hours horas, $_minutes minutos.'),
           ],
         ),
       ),
       actions: <Widget>[
-        TextButton(
-          child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
-          onPressed: () {
-            Navigator.of(context).pop();
-          },
-        ),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            foregroundColor: Colors.white,
-            backgroundColor: Theme.of(context).primaryColor,
-          ),
-          child: const Text('Aceptar'),
-          onPressed: () {
-            // Llama a la validación antes de cerrar
-            if (_validateFields()) {
-              print("Configuración ACEPTADA para ${widget.title}: ${_daysController.text} días, ${_hoursController.text} horas, ${_minutesController.text} minutos");
-              Navigator.of(context).pop();
-            }
-          },
+        Row(
+          children: [
+            Expanded(
+              child: TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                ),
+                child: const Text("Cancelar"),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                ),
+                onPressed: () {
+                  bool isValid = false;
+
+                  if (widget.tipo == "Cita") {
+                    // Valida los tres campos
+                    isValid = _validateFields();
+                  } else if (widget.tipo == "Medicamento") {
+                    // 🔹 Valida que el campo de minutos tenga valor
+                    setState(() {
+                      String minutosTexto = _minutesController.text.trim();
+
+                      if (minutosTexto.isEmpty || minutosTexto == "0") {
+                        _generalError = "Por favor ingresa un número válido";
+                        _minutesError = null;
+                        isValid = false;
+                      } else {
+                        _generalError = null;
+                        _minutesError = _validateValue('Minutos', minutosTexto);
+                        isValid = _minutesError == null;
+                      }
+                    });
+                  }
+
+                  if (isValid) {
+                    // Cierra el diálogo y retorna los valores
+                    Navigator.of(context).pop({
+                      'dias': _daysController.text.isEmpty ? 0 : int.parse(_daysController.text),
+                      'horas': _hoursController.text.isEmpty ? 0 : int.parse(_hoursController.text),
+                      'minutos': _minutesController.text.isEmpty ? 0 : int.parse(_minutesController.text),
+                      'tipoServicioId': widget.tipo == "Cita" ? 1 : 2,
+                    });
+                  }
+                },
+                child: const Text('Aceptar'),
+              ),
+            ),
+          ],
         ),
       ],
     );

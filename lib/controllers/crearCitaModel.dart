@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import '../../config/api_config.dart';
+import '../pages/Home.dart';
 import '../theme/AppTheme.dart';
 
 class crearCitaModel{
@@ -97,6 +98,14 @@ class crearCitaModel{
       if (response.statusCode == 201) {
         await showDialogCustom(context, "Éxito", "Cita guardada con éxito");
         Navigator.pop(context);
+      } else if (response.statusCode == 401) {
+        await showDialogCustom(context, "Sesión expirada", "Tu sesión ha caducado. Inicia sesión nuevamente.");
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.clear();
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomePage()),
+        );
       } else {
         await showDialogCustom(context, "Error", "Error al guardar cita: ${response.body}");
       }
@@ -104,6 +113,8 @@ class crearCitaModel{
       await showDialogCustom(context, "Error inesperado", "Ocurrió un error inesperado: $e");
     }
   }
+
+
 
   /// Diálogo personalizado
   Future<void> showDialogCustom(BuildContext context, String title, String message) async {
