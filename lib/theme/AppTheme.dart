@@ -111,9 +111,9 @@ class AppTheme {
             if (states.contains(MaterialState.hovered) ||
                 states.contains(MaterialState.focused) ||
                 states.contains(MaterialState.pressed)) {
-              return AppTheme.primaryColor; // 👈 hover/focus en primary
+              return AppTheme.primaryColor; // hover/focus en primary
             }
-            return Colors.black87; // 👈 estado normal en negro
+            return Colors.black87; // estado normal en negro
           }),
           side: MaterialStateProperty.resolveWith<BorderSide?>((states) {
             if (states.contains(MaterialState.hovered) ||
@@ -121,7 +121,7 @@ class AppTheme {
                 states.contains(MaterialState.pressed)) {
               return const BorderSide(color: AppTheme.primaryColor, width: 1);
             }
-            return BorderSide.none; // 👈 sin borde normalmente
+            return BorderSide.none; // sin borde normalmente
           }),
           shape: MaterialStateProperty.all(
             RoundedRectangleBorder(

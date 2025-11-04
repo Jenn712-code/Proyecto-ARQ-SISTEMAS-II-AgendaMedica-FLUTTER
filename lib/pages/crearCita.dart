@@ -159,7 +159,7 @@ class _CrearCitaState extends State<crearCita> {
               // Dropdown especialidad
               Center(
                 child: FractionallySizedBox(
-                widthFactor: 0.8,
+                  widthFactor: 0.8,
                   child: DropdownButtonFormField<int>(
                     initialValue: model.especialidadSeleccionada,
                     decoration: const InputDecoration(labelText: "Especialidad"),
@@ -442,4 +442,3 @@ class _CustomEnglishMaterialLocalizationsDelegate
   bool shouldReload(covariant LocalizationsDelegate<MaterialLocalizations> old) =>
       false;
 }
-
