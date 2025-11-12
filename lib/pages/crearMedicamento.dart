@@ -65,9 +65,14 @@ class _CrearMedicamentoState extends State<crearMedicamento> {
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return "El nombre del medicamento es obligatorio";
+                  } else if (value.length > 30) {
+                    return "El nombre del medicamento es demasiado largo";
                   }
                   return null;
                 },
+                inputFormatters: [
+                  LengthLimitingTextInputFormatter(40),
+                ],
               ),
 
               const SizedBox(height: 15),
@@ -79,10 +84,15 @@ class _CrearMedicamentoState extends State<crearMedicamento> {
                 icon: Icons.medication,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return "La dosis del medicamento no puede estar vacía";
+                    return "La dosis del medicamento es obligatoria";
+                  } else if (value.length > 20) {
+                    return "La dosis del medicamento es demasiado larga";
                   }
                   return null;
                 },
+                inputFormatters: [
+                  LengthLimitingTextInputFormatter(25),
+                ],
               ),
 
               const SizedBox(height: 15),
@@ -95,15 +105,25 @@ class _CrearMedicamentoState extends State<crearMedicamento> {
                 keyboardType: TextInputType.number, // <--- Solo números
                 inputFormatters: [
                   FilteringTextInputFormatter.digitsOnly, // <-- Solo permite números enteros
+                  LengthLimitingTextInputFormatter(2),
                 ],
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return "La frecuencia del tratamiento no puede estar vacía";
+                    return "La frecuencia del tratamiento es obligatoria";
+                  }
+
+                  final intValue = int.tryParse(value);
+                  if (intValue == null) {
+                    return "Por favor, ingrese un número válido";
+                  } else if (intValue <= 0) {
+                    return "La frecuencia debe ser mayor que 1 hora";
+                  } else if (intValue > 24) {
+                    return "La frecuencia no puede ser mayor a 24 horas";
                   }
                   return null;
                 },
                 prefixText: 'Cada ',
-                suffixText: 'hora(s)', // <--- Texto al final del campo
+                suffixText: ' hora(s)',
               ),
 
               const SizedBox(height: 15),
@@ -116,14 +136,24 @@ class _CrearMedicamentoState extends State<crearMedicamento> {
                 keyboardType: TextInputType.number, // <--- Solo números
                 inputFormatters: [
                   FilteringTextInputFormatter.digitsOnly, // <-- Solo permite números enteros
+                  LengthLimitingTextInputFormatter(2),
                 ],
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return "La duración del tratamiento no puede estar vacía";
+                    return "La duración del tratamiento es obligatoria";
+                  }
+
+                  final intValue = int.tryParse(value);
+                  if (intValue == null) {
+                    return "Ingrese un número válido";
+                  } else if (intValue <= 0) {
+                    return "La duración debe ser al menos de 1 día";
+                  } else if (intValue > 31) {
+                    return "La duración no puede exceder un mes";
                   }
                   return null;
                 },
-                suffixText: 'día(s)',
+                suffixText: ' día(s)',
               ),
 
               const SizedBox(height: 15),

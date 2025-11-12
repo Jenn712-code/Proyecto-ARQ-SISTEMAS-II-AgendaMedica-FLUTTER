@@ -3,6 +3,7 @@ import 'package:flutter_agenda_medica/pages/crearCita.dart';
 import 'package:flutter_agenda_medica/pages/crearMedicamento.dart';
 
 // 🎯 Widgets de Dashboard con pestañas
+import '../services/Notificacion.dart';
 import 'CitasDashboardConTabs.dart';
 import 'MedicamentosDashboardConTabs.dart';
 
@@ -50,7 +51,21 @@ class _DashboardState extends State<Dashboard> {
   // Lista de pantallas que vas a mostrar en el dashboard
   late final List<Widget> _pages = [
     // 0. Inicio
-    const Center(child: Text("Inicio")),
+    Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text("Inicio"),
+          const SizedBox(height: 16), // espaciado opcional
+          ElevatedButton(
+            onPressed: () {
+              //showNotification();
+            },
+            child: const Text('Mostrar notificación'),
+          ),
+        ],
+      ),
+    ),
 
     // 1. Citas (AHORA USA EL WIDGET CON EL TAB BAR)
     const CitasDashboardConTabs(),
