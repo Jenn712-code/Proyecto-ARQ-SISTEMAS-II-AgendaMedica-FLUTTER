@@ -73,9 +73,14 @@ class _CrearCitaState extends State<crearCita> {
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return "El nombre del médico es obligatorio";
+                  } else if (value.length > 30) {
+                    return "El nombre del médico es demasiado largo";
                   }
                   return null;
                 },
+                inputFormatters: [
+                  LengthLimitingTextInputFormatter(40),
+                ],
               ),
 
               const SizedBox(height: 15),
@@ -146,12 +151,17 @@ class _CrearCitaState extends State<crearCita> {
                 controller: model.direccionController,
                 label: 'Dirección',
                 icon: Icons.directions,
-                validator: (value){
+                validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return "La dirección no puede estar vacía";
+                    return "La dirección es obligatoria";
+                  } else if (value.length > 40) {
+                    return "La dirección es demasiado larga";
                   }
                   return null;
                 },
+                inputFormatters: [
+                  LengthLimitingTextInputFormatter(45),
+                ],
               ),
 
               const SizedBox(height: 15),

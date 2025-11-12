@@ -6,6 +6,7 @@ class AppTheme {
   static const Color secondaryColor = Color(0xFF47D6B9);
   static const Color backgroundColor = Color(0xFFE4F1EF);
   static const String fontFamily = "SnapITC";
+  static const Color textColor = Colors.black87;
 
   /// Helper para generar estilos con la fuente SnapITC
   static TextStyle snapStyle({
@@ -20,6 +21,12 @@ class AppTheme {
       color: color ?? Colors.black87,
     );
   }
+
+  static final TextStyle subtitleText = GoogleFonts.roboto(
+    fontSize: 14,
+    fontWeight: FontWeight.w600,
+    color: textColor,
+  );
 
   static ThemeData get lightTheme {
     return ThemeData(
@@ -97,38 +104,38 @@ class AppTheme {
 
       textButtonTheme: TextButtonThemeData(
         style: ButtonStyle(
-          minimumSize: MaterialStateProperty.all(const Size(215, 47)),
-          padding: MaterialStateProperty.all(
+          minimumSize: WidgetStateProperty.all(const Size(215, 47)),
+          padding: WidgetStateProperty.all(
             const EdgeInsets.symmetric(horizontal: 16),
           ),
-          textStyle: MaterialStateProperty.all(
+          textStyle: WidgetStateProperty.all(
             GoogleFonts.roboto(
               fontSize: 14,
               fontWeight: FontWeight.w600,
             ),
           ),
-          foregroundColor: MaterialStateProperty.resolveWith<Color>((states) {
-            if (states.contains(MaterialState.hovered) ||
-                states.contains(MaterialState.focused) ||
-                states.contains(MaterialState.pressed)) {
+          foregroundColor: WidgetStateProperty.resolveWith<Color>((states) {
+            if (states.contains(WidgetState.hovered) ||
+                states.contains(WidgetState.focused) ||
+                states.contains(WidgetState.pressed)) {
               return AppTheme.primaryColor; // hover/focus en primary
             }
             return Colors.black87; // estado normal en negro
           }),
-          side: MaterialStateProperty.resolveWith<BorderSide?>((states) {
-            if (states.contains(MaterialState.hovered) ||
-                states.contains(MaterialState.focused) ||
-                states.contains(MaterialState.pressed)) {
+          side: WidgetStateProperty.resolveWith<BorderSide?>((states) {
+            if (states.contains(WidgetState.hovered) ||
+                states.contains(WidgetState.focused) ||
+                states.contains(WidgetState.pressed)) {
               return const BorderSide(color: AppTheme.primaryColor, width: 1);
             }
             return BorderSide.none; // sin borde normalmente
           }),
-          shape: MaterialStateProperty.all(
+          shape: WidgetStateProperty.all(
             RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(24),
             ),
           ),
-          overlayColor: MaterialStateProperty.all(
+          overlayColor: WidgetStateProperty.all(
             AppTheme.primaryColor.withOpacity(0.08), // efecto al presionar
           ),
         ),

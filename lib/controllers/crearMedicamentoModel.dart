@@ -1,11 +1,13 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import '../../config/api_config.dart';
-import '../theme/AppTheme.dart';
+import '../pages/Perfil.dart';
+import '../widgets/ShowDialogCustom.dart';
+import 'DashboardModel.dart';
 
 class CrearMedicamentoModel {
   final formKey = GlobalKey<FormState>();
@@ -27,7 +29,11 @@ class CrearMedicamentoModel {
     final token = prefs.getString('token');
 
     if (token == null) {
-      await showDialogCustom(context, "Error", "Sesión no encontrada. Inicia sesión nuevamente.");
+      DialogUtils.showDialogCustom(
+        context: context,
+        title: "Error",
+        message: "Sesión no encontrada. Inicia sesión nuevamente.",
+      );
       return;
     }
 
@@ -39,7 +45,11 @@ class CrearMedicamentoModel {
         final horaTexto = horaController.text.trim();
 
         if (fechaTexto.isEmpty || horaTexto.isEmpty) {
-          await showDialogCustom(context, "Error", "Debes seleccionar fecha y hora para el recordatorio.");
+          await DialogUtils.showDialogCustom(
+            context: context,
+            title: "Error",
+            message: "Debe seleccionar fecha y hora para el recordatorio",
+          );
           return;
         }
 
@@ -67,6 +77,41 @@ class CrearMedicamentoModel {
         fechaHoraCombinada = DateTime(fecha.year, fecha.month, fecha.day, hora24, minuto);
       }
 
+      // ─────── VERIFICAR CONFIGURACIÓN DE RECORDATORIO ───────
+      if (recordatorio) {
+        Map<String, dynamic> decodedToken = JwtDecoder.decode(token);
+        final cedula = decodedToken['cedula']?.toString() ?? '';
+
+        final configurado = await verificarRecordatorioConfigurado(
+          context, "Medicamento", cedula, token,
+        );
+
+        if (!configurado) {
+          bool deseaConfigurar =
+          await mostrarPopupConfiguracionFaltante(context, "Medicamento");
+
+          if (deseaConfigurar) {
+            // Redirigir al perfil con el popup de configuración abierto
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) =>
+                    Perfil(
+                      model: DashboardModel(),
+                      abrirConfiguracion: true,
+                      volverACrearMedicamento: true,
+                      abrirConfigMedicamento: true,
+                    ),
+              ),
+            );
+            return; // Detener aquí
+          } else {
+            // Usuario canceló → no guarda la cita
+            return;
+          }
+        }
+      }
+
       final medicamento = {
         "medNombre": nombreMedicamentoController.text.trim(),
         "medFrecuencia": int.parse(frecuenciaController.text),
@@ -89,55 +134,72 @@ class CrearMedicamentoModel {
       );
 
       if (response.statusCode == 201) {
-        await showDialogCustom(context, "Éxito", "Medicamento guardado con éxito");
+        await DialogUtils.showDialogCustom(
+          context: context,
+          title: "Éxito",
+          message: "Medicamento guardado con éxito",
+        );
         Navigator.pop(context);
       } else {
-        await showDialogCustom(context, "Error", "Error al guardar medicamento: ${response.body}");
+        await DialogUtils.showDialogCustom(
+            context: context,
+            title: "Error",
+            message: "Error al guardar medicamento: ${response.body}",
+        );
       }
     } catch (e) {
-      await showDialogCustom(context, "Error inesperado", "Ocurrió un error inesperado: $e");
+      await DialogUtils.showDialogCustom(
+        context: context,
+        title: "Error inesperado",
+        message: "Ocurrió un error inesperado: $e",
+      );
     }
   }
 
-  /// Diálogo personalizado
-  Future<void> showDialogCustom(BuildContext context, String title, String message) async {
-    return showDialog(
+  Future<bool> verificarRecordatorioConfigurado(BuildContext context,
+      String tipoServicio, String cedula, String token) async {
+    try {
+      final tipoServicioId = tipoServicio == "Medicamento" ? 2 : 1;
+
+      final response = await http.get(
+        Uri.parse("${ApiConfig
+            .baseUrl}/recordatorios/cargarRecordatorio/$tipoServicioId/$cedula"),
+        headers: {
+          "Authorization": "Bearer $token",
+          "Content-Type": "application/json",
+        },
+      );
+
+      if (response.statusCode == 200 && response.body.isNotEmpty) {
+        final data = jsonDecode(response.body);
+        final minutos = data['minutos'] ?? 0;
+        return minutos > 0; // Configurado
+      } else {
+        return false; //No configurado
+      }
+    } catch (e) {
+      print("Error al verificar recordatorio: $e");
+      return false;
+    }
+  }
+
+  Future<bool> mostrarPopupConfiguracionFaltante(BuildContext context, String tipoServicio) async {
+    bool confirmado = false;
+
+    await DialogUtils.showDialogConfirm(
       context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          title,
-          textAlign: TextAlign.center,
-          style: AppTheme.snapStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: AppTheme.primaryColor,
-          ),
-        ),
-        content: Text(
-          message,
-          textAlign: TextAlign.center,
-          style: GoogleFonts.roboto(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: Colors.black,
-          ),
-        ),
-        actionsAlignment: MainAxisAlignment.center,
-        actions: [
-          TextButton(
-            style: TextButton.styleFrom(
-              backgroundColor: AppTheme.primaryColor,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-            ),
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text("OK", style: GoogleFonts.roboto(fontSize: 14, fontWeight: FontWeight.w600)),
-          ),
-        ],
-      ),
+      title: "Configuración faltante",
+      message: "No hay una configuración de recordatorio para tu $tipoServicio.\n¿Deseas configurarla ahora?",
+      confirmText: "Sí",
+      cancelText: "Cancelar",
+      onConfirm: () {
+        confirmado = true;
+      },
+      onCancel: () {
+        confirmado = false;
+      },
     );
+
+    return confirmado;
   }
 }

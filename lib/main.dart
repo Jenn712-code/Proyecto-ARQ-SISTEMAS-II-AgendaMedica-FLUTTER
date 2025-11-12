@@ -1,11 +1,16 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_agenda_medica/pages/Home.dart';
+import 'package:flutter_agenda_medica/services/Notificacion.dart';
 import 'package:flutter_agenda_medica/theme/AppTheme.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await initNotifications();
+
+  // Iniciar la app
   runApp(const MyApp());
 }
 

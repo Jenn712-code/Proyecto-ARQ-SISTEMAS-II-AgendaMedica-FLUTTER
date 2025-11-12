@@ -1,9 +1,8 @@
-// Archivo: lib/pages/CitasDashboardConTabs.dart
-
 import 'package:flutter/material.dart';
-// Importa tu formulario de creación de citas
+import 'package:shared_preferences/shared_preferences.dart';
+import '../controllers/listarCitas.dart';
+import '../services/listarCitasService.dart';
 import 'crearCita.dart';
-// Importa el widget de la tarjeta (asumiendo que está en lib/widgets)
 import '../widgets/CitaCard.dart';
 
 class CitasDashboardConTabs extends StatefulWidget {
@@ -13,66 +12,42 @@ class CitasDashboardConTabs extends StatefulWidget {
   State<CitasDashboardConTabs> createState() => _CitasDashboardConTabsState();
 }
 
-// 🎯 NECESARIO: Agrega 'with SingleTickerProviderStateMixin' para el TabController
-class _CitasDashboardConTabsState extends State<CitasDashboardConTabs>
-    with SingleTickerProviderStateMixin {
+class _CitasDashboardConTabsState extends State<CitasDashboardConTabs> with SingleTickerProviderStateMixin {
 
   late TabController _tabController;
+  final CitaService _citaService = CitaService();
+  Map<String, List<Cita>>? _citas;
+  String? _token;
 
   @override
   void initState() {
     super.initState();
-    // 3 pestañas: Pendientes, Asistidas, No Asistidas
-    _tabController = TabController(length: 3, vsync: this, initialIndex: 0);
+    _loadCitas();
+    _tabController = TabController(length: 3, vsync: this);
   }
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
+  Future<void> _loadCitas() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    if (token == null) {
+      debugPrint('No se encontró token guardado');
+      return;
+    }
+    setState(() => _token = token);
+
+    try {
+      final data = await _citaService.listarCitas(token);
+      setState(() => _citas = data);
+    } catch (e) {
+      debugPrint('Error al cargar citas: $e');
+    }
   }
 
-  // 💡 Datos de prueba temporales para Citas
-  final List<Map<String, String>> _citasPendientes = [
-    {
-      "especialidad": "Cardiología",
-      "medico": "Dr. Juan Pérez",
-      "fechaHora": "15 Dic 2025 - 10:30 AM",
-      "direccion": "Calle Salud 123, Consultorio 5"
-    },
-    {
-      "especialidad": "Dermatología",
-      "medico": "Dra. María González",
-      "fechaHora": "18 Nov 2025 - 2:15 PM",
-      "direccion": "Av. Médica 456, Piso 2"
-    },
-    // Añadir más datos de prueba si es necesario...
-  ];
 
-  final List<Map<String, String>> _citasAsistidas = [
-    {
-      "especialidad": "Pediatría",
-      "medico": "Dr. Carlos López",
-      "fechaHora": "20 May 2025 - 9:00 AM",
-      "direccion": "Clínica Infantil, Sala 12"
-    },
-  ];
-
-  final List<Map<String, String>> _citasNoAsistidas = [
-    {
-      "especialidad": "Oftalmología",
-      "medico": "Dra. Ana Martínez",
-      "fechaHora": "22 Abr 2025 - 4:30 PM",
-      "direccion": "Centro Oftalmológico, Consultorio B"
-    },
-  ];
-
-  // 🎯 Método para construir la lista de citas, reutilizando CitaCard
-  Widget _buildCitaList(List<Map<String, String>> citas, Color color) {
+  Widget _buildCitaList(List<Cita> citas, Color color) {
     if (citas.isEmpty) {
-      return const Center(
-        child: Text("No hay citas registradas en esta categoría.", textAlign: TextAlign.center),
-      );
+      return const Center(child: Text("No hay citas registradas."));
     }
 
     return ListView.builder(
@@ -80,23 +55,23 @@ class _CitasDashboardConTabsState extends State<CitasDashboardConTabs>
       itemBuilder: (context, index) {
         final cita = citas[index];
         return CitaCard(
-          especialidad: cita["especialidad"]!,
-          medico: cita["medico"]!,
-          fechaHora: cita["fechaHora"]!,
-          direccion: cita["direccion"]!,
-          colorBorde: color,
+          nomMedico: cita.nomMedico ?? '',
+          especialidad: cita.especialidad ?? '',
+          fecha: cita.fecha ?? '',
+          hora: cita.hora ?? '',
+          direccion: cita.direccion ?? '',
+          colorFondo: color,
         );
       },
     );
   }
-
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Column(
         children: [
-          // 🎯 EL TAB BAR
+          // EL TAB BAR
           TabBar(
             controller: _tabController,
             indicatorColor: Colors.teal,
@@ -110,26 +85,28 @@ class _CitasDashboardConTabsState extends State<CitasDashboardConTabs>
             isScrollable: false,
           ),
 
-          // 🎯 EL CONTENIDO DE LAS PESTAÑAS
+          // CONTENIDO DE LAS TABS
           Expanded(
-            child: TabBarView(
+            child: _citas == null
+                ? const Center(child: CircularProgressIndicator()) // Cargando
+                : TabBarView(
               controller: _tabController,
               children: [
-                // 1. Pendientes (Borde Azul Oscuro)
-                _buildCitaList(_citasPendientes, Colors.blue.shade800),
+                // Pendientes (borde azul oscuro)
+                _buildCitaList(_citas!['pendientes'] ?? [], Colors.blue.shade800),
 
-                // 2. Asistidas (Borde Verde)
-                _buildCitaList(_citasAsistidas, Colors.green),
+                // 2Asistidas (borde verde)
+                _buildCitaList(_citas!['asistidas'] ?? [], Colors.green),
 
-                // 3. No Asistidas (Borde Rojo)
-                _buildCitaList(_citasNoAsistidas, Colors.red),
+                // 3No Asistidas (borde rojo)
+                _buildCitaList(_citas!['noAsistidas'] ?? [], Colors.red),
               ],
             ),
           ),
         ],
       ),
 
-      // 🎯 BOTÓN FLOTANTE para la creación de citas
+      // BOTÓN FLOTANTE para la creación de citas
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(bottom: 20.0),
         child: ElevatedButton.icon(
