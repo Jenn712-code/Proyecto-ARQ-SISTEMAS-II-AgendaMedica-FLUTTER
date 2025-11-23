@@ -28,9 +28,9 @@ class _CrearMedicamentoState extends State<crearMedicamento> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           "Crear Medicamento",
-          style: TextStyle(
+          style: GoogleFonts.roboto(
             color: Colors.white,
             fontWeight: FontWeight.bold,
             fontSize: 24,
@@ -72,6 +72,7 @@ class _CrearMedicamentoState extends State<crearMedicamento> {
                         controller: model.nombreMedicamentoController,
                         label: 'Nombre',
                         icon: Icons.text_fields,
+                        obscureText: false,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return "El nombre del medicamento es obligatorio";
@@ -90,6 +91,7 @@ class _CrearMedicamentoState extends State<crearMedicamento> {
                         controller: model.dosisController,
                         label: 'Dosis',
                         icon: Icons.medication,
+                        obscureText: false,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return "La dosis del medicamento es obligatoria";
@@ -108,6 +110,7 @@ class _CrearMedicamentoState extends State<crearMedicamento> {
                         controller: model.frecuenciaController,
                         label: 'Frecuencia',
                         icon: Icons.repeat,
+                        obscureText: false,
                         keyboardType: TextInputType.number,
                         inputFormatters: [
                           FilteringTextInputFormatter.digitsOnly,
@@ -137,6 +140,7 @@ class _CrearMedicamentoState extends State<crearMedicamento> {
                         controller: model.duracionController,
                         label: 'Duración',
                         icon: Icons.hourglass_bottom,
+                        obscureText: false,
                         keyboardType: TextInputType.number,
                         inputFormatters: [
                           FilteringTextInputFormatter.digitsOnly,
@@ -198,6 +202,7 @@ class _CrearMedicamentoState extends State<crearMedicamento> {
                           controller: model.fechaController,
                           label: 'Fecha',
                           icon: Icons.calendar_today,
+                          obscureText: false,
                           readOnly: true,
                           onTap: () => _mostrarSelectorFecha(context),
                           validator: (value) {
@@ -213,6 +218,7 @@ class _CrearMedicamentoState extends State<crearMedicamento> {
                           controller: model.horaController,
                           label: 'Hora',
                           icon: Icons.access_time,
+                          obscureText: false,
                           readOnly: true,
                           onTap: () async {
                             TimeOfDay? pickedTime = await showTimePicker(

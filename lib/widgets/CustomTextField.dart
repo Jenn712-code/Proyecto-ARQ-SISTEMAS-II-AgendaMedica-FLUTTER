@@ -8,6 +8,8 @@ enum IconAlignment { start, end }
 class CustomTextField extends StatelessWidget {
   final TextEditingController controller;
   final String label;
+  final bool obscureText;
+  final VoidCallback? togglePassword;
   final IconData icon;
   final String? Function(String?)? validator;
   final bool readOnly;
@@ -23,7 +25,9 @@ class CustomTextField extends StatelessWidget {
     super.key,
     required this.controller,
     required this.label,
+    required this.obscureText,
     required this.icon,
+    this.togglePassword,
     this.validator,
     this.readOnly = false,
     this.onTap,
@@ -42,6 +46,7 @@ class CustomTextField extends StatelessWidget {
       child: TextFormField(
         controller: controller,
         validator: validator,
+        obscureText: obscureText,
         style: GoogleFonts.roboto(
           fontSize: 14,
           fontWeight: FontWeight.w600,
@@ -58,9 +63,17 @@ class CustomTextField extends StatelessWidget {
           prefixIcon: iconAlignment == IconAlignment.start
               ? Icon(icon, color: AppTheme.primaryColor)
               : null,
-          suffixIcon: iconAlignment == IconAlignment.end
+          suffixIcon: togglePassword != null
+              ? IconButton(
+            icon: Icon(
+              icon,
+              color: AppTheme.primaryColor,
+            ),
+            onPressed: togglePassword,
+          )
+              : (iconAlignment == IconAlignment.end
               ? Icon(icon, color: AppTheme.primaryColor)
-              : null,
+              : null),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(24),
           ),

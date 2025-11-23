@@ -38,16 +38,16 @@ class _CrearCitaState extends State<crearCita> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           "Crear Cita",
-          style: TextStyle(
+          style: GoogleFonts.roboto(
             color: Colors.white,
             fontWeight: FontWeight.bold,
             fontSize: 24,
           ),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
-        backgroundColor: Colors.blue.shade900,
+        backgroundColor: AppTheme.primaryColor,
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
@@ -83,6 +83,7 @@ class _CrearCitaState extends State<crearCita> {
                         controller: model.nombreMedicoController,
                         label: 'Nombre del médico',
                         icon: Icons.person,
+                        obscureText: false,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return "El nombre del médico es obligatorio";
@@ -103,6 +104,7 @@ class _CrearCitaState extends State<crearCita> {
                         controller: model.fechaController,
                         label: 'Fecha',
                         icon: Icons.calendar_today,
+                        obscureText: false,
                         readOnly: true,
                         onTap: () => _mostrarSelectorFecha(context),
                         validator: (value) {
@@ -120,6 +122,7 @@ class _CrearCitaState extends State<crearCita> {
                         controller: model.horaController,
                         label: 'Hora',
                         icon: Icons.access_time,
+                        obscureText: false,
                         readOnly: true,
                         onTap: () async {
                           TimeOfDay? pickedTime = await showTimePicker(
@@ -166,6 +169,7 @@ class _CrearCitaState extends State<crearCita> {
                         controller: model.direccionController,
                         label: 'Dirección',
                         icon: Icons.directions,
+                        obscureText: false,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return "La dirección es obligatoria";

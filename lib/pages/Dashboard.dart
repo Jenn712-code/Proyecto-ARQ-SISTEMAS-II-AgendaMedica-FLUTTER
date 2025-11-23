@@ -47,12 +47,33 @@ class _DashboardState extends State<Dashboard> {
         await NotificacionService().programarTodas(model.token!);
       }
     });
+
+
   }
 
-  void _onItemTapped(int index) {
+  Future<void> _onItemTapped(int index) async {
     setState(() {
       _selectedIndex = index;
     });
+
+    if (index == 0) {
+      setState(() => cargando = true);
+
+      await model.cargarDatosUsuario();
+
+      setState(() {
+        cargando = false;
+        _pages = [
+          InicioDashboard(
+            citas: model.citas,
+            medicamentos: model.medicamentos,
+          ),
+          const CitasDashboardConTabs(),
+          const MedicamentosDashboardConTabs(),
+          Perfil(model: model),
+        ];
+      });
+    }
   }
 
   final List<String> _titles = [
