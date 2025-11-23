@@ -98,17 +98,13 @@ class _MedicamentoCardState extends State<MedicamentoCard> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     IconButton(
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
                       icon: Icon(Icons.edit, color: AppTheme.primaryColor),
+                      tooltip: "Editar medicamiento",
                       onPressed: () {},
                     ),
-                    SizedBox(width: 8),
-
                     IconButton(
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
                       icon: const Icon(Icons.delete, color: Colors.red),
+                      tooltip: "Eliminar medicamento",
                       onPressed: () {
                         DialogUtils.showDialogConfirm(
                           context: context,
@@ -118,14 +114,11 @@ class _MedicamentoCardState extends State<MedicamentoCard> {
                         );
                       },
                     ),
-                    SizedBox(width: 8),
-
-                    IconButton(
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      icon: const Icon(Icons.check_circle, color: Colors.green),
-                      onPressed: () {},
-                    ),
+                    /*IconButton(
+                        icon: const Icon(Icons.check_circle, color: Colors.green),
+                        tooltip: "Marcar como asistida",
+                        onPressed: () {},
+                      ),*/
                   ],
                 ),
               ),

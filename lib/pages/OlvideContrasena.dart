@@ -26,16 +26,14 @@ class _OlvideContrasenaPageState extends State<OlvideContrasena> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Recuperar contraseña",
-          style: TextStyle(
+        title: Text("Recuperar contraseña",
+          style: GoogleFonts.roboto(
             color: Colors.white,
             fontWeight: FontWeight.bold,
             fontSize: 24,
           ),
         ),
-        iconTheme: const IconThemeData(
-          color: Colors.white,
-        ),
+        iconTheme: const IconThemeData(color: Colors.white),
         backgroundColor: AppTheme.primaryColor,
       ),
       body: Form(

@@ -122,11 +122,11 @@ class _CitaCardState extends State<CitaCard> {
                           );
                         },
                       ),
-                      IconButton(
+                      /*IconButton(
                         icon: const Icon(Icons.check_circle, color: Colors.green),
                         tooltip: "Marcar como asistida",
                         onPressed: () {},
-                      ),
+                      ),*/
                     ],
                   ),
                 ),

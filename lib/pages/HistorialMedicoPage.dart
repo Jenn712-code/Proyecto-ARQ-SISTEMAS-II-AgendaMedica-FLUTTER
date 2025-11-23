@@ -48,15 +48,15 @@ class _HistorialMedicoPageState extends State<HistorialMedicoPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Historial Médico",
-          style: TextStyle(
+        title: Text("Historial Médico",
+          style: GoogleFonts.roboto(
             color: Colors.white,
             fontWeight: FontWeight.bold,
             fontSize: 24,
           ),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
-        backgroundColor: Theme.of(context).primaryColor,
+        backgroundColor: AppTheme.primaryColor,
       ),
       body: _historial.isEmpty
           ? const Center(

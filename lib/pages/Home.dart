@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_agenda_medica/pages/crearPaciente.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/AppTheme.dart';
 import 'Dashboard.dart';
@@ -208,7 +209,14 @@ class _HomePageState extends State<HomePage> {
 
                           // Botón registro
                           TextButton(
-                            onPressed: () => debugPrint("Registrarse"),
+                            onPressed: (){
+                              model.limpiarCampos(_formKey);
+                              _formKey.currentState?.reset();
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const crearPaciente()),
+                              );
+                            },
                             child: const Text("No tengo cuenta, registrarme"),
                           ),
 
