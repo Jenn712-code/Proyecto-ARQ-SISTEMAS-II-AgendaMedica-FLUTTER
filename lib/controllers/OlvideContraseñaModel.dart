@@ -23,6 +23,7 @@ class OlvideContrasenaModel {
   bool mostrarToken = false;
 
   final String urlBase = "${ApiConfig.baseUrl}/IniciarSesion";
+  String recoveryToken = "";
 
   // === Validar correo ===
   Future<void> validarCorreo(BuildContext context, GlobalKey<FormState> formKey, Function setState) async {
@@ -44,6 +45,8 @@ class OlvideContrasenaModel {
 
     if (response.statusCode == 200) {
       _showDialog(context, "Correo enviado", mensaje);
+      // Guardar el JWT que viene del backend
+      recoveryToken = data["token"] ?? "";
       setState(() => correoValidado = true);
       FocusScope.of(context).unfocus();
     } else {
@@ -51,7 +54,7 @@ class OlvideContrasenaModel {
     }
   }
 
-  // === Validar token ===
+  // === Validar token (Código de 6 digitos)===
   Future<void> validarToken(BuildContext context, GlobalKey<FormState> formKey, Function setState) async {
     if (!formKey.currentState!.validate()) return;
 
@@ -62,7 +65,8 @@ class OlvideContrasenaModel {
       headers: {"Content-Type": "application/json"},
       body: jsonEncode({
         "pacCorreo": correoController.text.trim(),
-        "token": tokenController.text.trim(),
+        "token": recoveryToken,
+        "codigo": tokenController.text.trim(),
         "nuevaContrasena": "",
       }),
     );
@@ -70,10 +74,10 @@ class OlvideContrasenaModel {
     setState(() => procesando = false);
 
     final data = jsonDecode(response.body);
-    final mensaje = data['mensaje'] ?? "Error al validar el token";
+    final mensaje = data['mensaje'] ?? "Error al validar el código";
 
     if (response.statusCode == 200) {
-      _showDialog(context, "Token validado", mensaje);
+      _showDialog(context, "Código validado", mensaje);
       setState(() => tokenValidado = true);
       FocusScope.of(context).unfocus();
     } else {
@@ -95,7 +99,8 @@ class OlvideContrasenaModel {
       headers: {"Content-Type": "application/json"},
       body: jsonEncode({
         "pacCorreo": correo,
-        "token": token,
+        "token": recoveryToken,       // JWT largo
+        "codigo": tokenController.text.trim(),
         "nuevaContrasena": nuevaContrasena,
       }),
     );

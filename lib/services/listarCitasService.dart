@@ -1,13 +1,12 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-
 import '../config/api_config.dart';
 import '../controllers/listarCitas.dart';
 
 
 class CitaService {
 
-  Future<Map<String, List<Cita>>> listarCitas(String token) async {
+  Future<Map<String, List<Cita>>> listarCitasBD(String token) async {
     final url = Uri.parse("${ApiConfig.baseUrl}/citas/listarCitas");
 
     final response = await http.get(

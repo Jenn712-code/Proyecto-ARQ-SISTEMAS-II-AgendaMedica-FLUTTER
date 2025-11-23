@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 // 🎯 VERIFICA QUE LA RUTA A TU WIDGET SEA CORRECTA
+import '../theme/AppTheme.dart';
 import '../widgets/UploadFileModal.dart';
 
 // MODELO DE DATOS
@@ -46,7 +48,14 @@ class _HistorialMedicoPageState extends State<HistorialMedicoPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Historial Médico"),
+        title: const Text("Historial Médico",
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 24,
+          ),
+        ),
+        iconTheme: const IconThemeData(color: Colors.white),
         backgroundColor: Theme.of(context).primaryColor,
       ),
       body: _historial.isEmpty
@@ -60,8 +69,31 @@ class _HistorialMedicoPageState extends State<HistorialMedicoPage> {
           return ListTile(
             leading: const Icon(Icons.picture_as_pdf, color: Colors.red),
             title: Text(archivo.nombre, style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text(
-                'Fecha: ${DateFormat('dd MMM yyyy').format(archivo.fecha)} | Tamaño: ${(archivo.sizeInKB / 1024).toStringAsFixed(2)} MB'),
+            subtitle: RichText(
+              text: TextSpan(
+                style: GoogleFonts.roboto(
+                  fontSize: 14,
+                  color: Colors.black87,
+                ),
+                children: [
+                  const TextSpan(
+                    text: 'Fecha: ',
+                    style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
+                  ),
+                  TextSpan(
+                    text: DateFormat('dd MMM yyyy', 'es_ES').format(archivo.fecha),
+                  ),
+                  const TextSpan(text: '   |   '),
+                  const TextSpan(
+                    text: 'Tamaño: ',
+                    style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
+                  ),
+                  TextSpan(
+                    text: '${(archivo.sizeInKB / 1024).toStringAsFixed(2)} MB',
+                  ),
+                ],
+              ),
+            ),
             onTap: () {
               // Acción para abrir o descargar el PDF
               ScaffoldMessenger.of(context).showSnackBar(

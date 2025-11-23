@@ -34,7 +34,6 @@ class _HomePageState extends State<HomePage> {
     model.dispose();
     _keyboardFocusNode.dispose();
     super.dispose();
-    model.limpiarCampos(_formKey);
   }
 
   @override
