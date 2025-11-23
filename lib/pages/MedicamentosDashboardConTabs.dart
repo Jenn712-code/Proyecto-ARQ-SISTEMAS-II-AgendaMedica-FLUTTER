@@ -1,9 +1,9 @@
-// Archivo: lib/pages/MedicamentosDashboardConTabs.dart
-
 import 'package:flutter/material.dart';
-// Importa tu formulario de creación de medicamento
+import 'package:flutter_agenda_medica/services/listarMedicamentosService.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../controllers/listarMedicamentos.dart';
+import '../theme/AppTheme.dart';
 import 'crearMedicamento.dart';
-// Importa el widget de la tarjeta (asumiendo que está en lib/widgets)
 import '../widgets/MedicamentoCard.dart';
 
 class MedicamentosDashboardConTabs extends StatefulWidget {
@@ -13,17 +13,19 @@ class MedicamentosDashboardConTabs extends StatefulWidget {
   State<MedicamentosDashboardConTabs> createState() => _MedicamentosDashboardConTabsState();
 }
 
-// 🎯 NECESARIO: Agrega 'with SingleTickerProviderStateMixin' para el TabController
-class _MedicamentosDashboardConTabsState extends State<MedicamentosDashboardConTabs>
-    with SingleTickerProviderStateMixin {
+class _MedicamentosDashboardConTabsState extends State<MedicamentosDashboardConTabs> with SingleTickerProviderStateMixin {
 
   late TabController _tabController;
+  final MedicamentosService _medicamentosService = MedicamentosService();
+  Map<String, List<Medicamento>>? _medicamentos;
+  String? _token;
 
   @override
   void initState() {
     super.initState();
     // 3 pestañas: Programados, Consumidos, Omitidos
     _tabController = TabController(length: 3, vsync: this);
+    _loadMedicamentos();
   }
 
   @override
@@ -32,22 +34,27 @@ class _MedicamentosDashboardConTabsState extends State<MedicamentosDashboardConT
     super.dispose();
   }
 
-  // 💡 Datos de prueba temporales para simular la carga
-  final List<Map<String, String>> _medsProgramados = [
-    {"nombre": "Amoxicilina", "dosis": "500mg", "frecuencia": "Cada 8 horas", "toma": "08:00 AM"},
-    {"nombre": "Ibuprofeno", "dosis": "200mg", "frecuencia": "Cada 6 horas", "toma": "12:00 PM"},
-  ];
-  final List<Map<String, String>> _medsConsumidos = [
-    {"nombre": "Vitaminas D", "dosis": "1 tableta", "frecuencia": "Diaria", "toma": "Consumido"},
-  ];
-  final List<Map<String, String>> _medsOmitidos = [
-    {"nombre": "Metformina", "dosis": "850mg", "frecuencia": "Cada 12 horas", "toma": "Omitido"},
-  ];
+  Future<void> _loadMedicamentos() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
 
-  // 🎯 Método para construir la lista de medicamentos, reutilizando MedicamentoCard
-  Widget _buildMedicamentoList(List<Map<String, String>> medicamentos, Color color) {
+    if (token == null) {
+      debugPrint('No se encontró token guardado');
+      return;
+    }
+    setState(() => _token = token);
+
+    try {
+      final data = await _medicamentosService.listarMedicamentosBD(token);
+      setState(() => _medicamentos = data);
+    } catch (e) {
+      debugPrint('Error al cargar los medicamentos: $e');
+    }
+  }
+
+  Widget _buildMedicamentoList(List<Medicamento> medicamentos, Color color) {
     if (medicamentos.isEmpty) {
-      return const Center(child: Text("No hay medicamentos registrados en esta categoría."));
+      return Center(child: Text("No hay medicamentos registrados en esta categoría", style: AppTheme.subtitleText));
     }
 
     return ListView.builder(
@@ -55,23 +62,42 @@ class _MedicamentosDashboardConTabsState extends State<MedicamentosDashboardConT
       itemBuilder: (context, index) {
         final med = medicamentos[index];
         return MedicamentoCard(
-          nombre: med["nombre"]!,
-          dosis: med["dosis"]!,
-          frecuencia: med["frecuencia"]!,
-          siguienteToma: med["toma"]!,
+          nombre: med.nombre ?? '',
+          dosis: med.dosis ?? '',
+          frecuencia: med.frecuencia ?? '',
+          duracion: med.duracion ?? '',
+          fecha: med.fecha ?? '',
           colorFondo: color,
         );
       },
     );
   }
 
+  List<Medicamento> _ordenarPorFechaHora(List<Medicamento> medicamentos) {
+    medicamentos.sort((a, b) {
+      final fechaHoraA = _parseFechaHoraIso(a.fecha);
+      final fechaHoraB = _parseFechaHoraIso(b.fecha);
+      return fechaHoraA.compareTo(fechaHoraB);
+    });
+    return medicamentos;
+  }
+
+  DateTime _parseFechaHoraIso(String? fechaHoraIso) {
+    try {
+      if (fechaHoraIso == null || fechaHoraIso.isEmpty) {
+        return DateTime(2100); // Fecha muy lejana para evitar errores
+      }
+      return DateTime.parse(fechaHoraIso);
+    } catch (e) {
+      return DateTime(2100);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Column(
         children: [
-          // 🎯 EL TAB BAR
           TabBar(
             controller: _tabController,
             indicatorColor: Colors.teal,
@@ -85,35 +111,48 @@ class _MedicamentosDashboardConTabsState extends State<MedicamentosDashboardConT
             isScrollable: false,
           ),
 
-          // 🎯 EL CONTENIDO DE LAS PESTAÑAS
+          // EL CONTENIDO DE LAS PESTAÑAS
           Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                // 1. Programados
-                _buildMedicamentoList(_medsProgramados, Colors.blue.shade800),
-
-                // 2. Consumidos
-                _buildMedicamentoList(_medsConsumidos, Colors.green),
-
-                // 3. Omitidos
-                _buildMedicamentoList(_medsOmitidos, Colors.red),
-              ],
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 75),
+              child: _medicamentos == null
+                  ? const Center(child: CircularProgressIndicator()) // Cargando
+                  : TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildMedicamentoList(
+                    _ordenarPorFechaHora(_medicamentos!['pendientes'] ?? []),
+                    Colors.blue.shade800,
+                  ),
+                  _buildMedicamentoList(
+                    _ordenarPorFechaHora(_medicamentos!['consumidos'] ?? []),
+                    Colors.green,
+                  ),
+                  _buildMedicamentoList(
+                    _ordenarPorFechaHora(_medicamentos!['noConsumidos'] ?? []),
+                    Colors.red,
+                  ),
+                ],
+              ),
             ),
           ),
         ],
       ),
 
-      // 🎯 BOTÓN FLOTANTE para la creación de medicamentos
+      // BOTÓN FLOTANTE para la creación de medicamentos
       floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 20.0),
+        padding: const EdgeInsets.only(bottom: 5),
         child: ElevatedButton.icon(
-          onPressed: () {
-            // NAVEGA a tu formulario (crearMedicamento.dart)
-            Navigator.push(
+          onPressed: () async {
+            final result = await Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const crearMedicamento()),
             );
+
+            // Si se creó una cita, recargamos los datos
+            if (result == true) {
+              _loadMedicamentos();
+            }
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.blue.shade900,
@@ -124,10 +163,10 @@ class _MedicamentosDashboardConTabsState extends State<MedicamentosDashboardConT
             ),
           ),
           icon: const Icon(Icons.add),
-          label: const Text("Crear medicamento", style: TextStyle(fontSize: 18)),
+          label: const Text("Crear", style: TextStyle(fontSize: 18)),
         ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButtonLocation: FloatingActionButtonLocation.miniCenterFloat,
     );
   }
 }

@@ -139,7 +139,7 @@ class CrearMedicamentoModel {
           title: "Éxito",
           message: "Medicamento guardado con éxito",
         );
-        Navigator.pop(context);
+        Navigator.pop(context, true);
       } else {
         await DialogUtils.showDialogCustom(
             context: context,

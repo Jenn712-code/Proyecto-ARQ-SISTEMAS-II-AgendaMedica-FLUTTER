@@ -14,6 +14,7 @@ class _OlvideContrasenaPageState extends State<OlvideContrasena> {
   final _formKey = GlobalKey<FormState>();
   final OlvideContrasenaModel model = OlvideContrasenaModel();
 
+
   @override
   void dispose() {
     model.dispose();
@@ -98,7 +99,7 @@ class _OlvideContrasenaPageState extends State<OlvideContrasena> {
 
               if (model.correoValidado) ...[
                 Text(
-                  'Ingrese el token recibido por correo eléctronico',
+                  'Ingrese el código de 6 dígitos recibido por correo',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     fontFamily: GoogleFonts.roboto().fontFamily,
                     fontWeight: FontWeight.w600,
@@ -108,7 +109,7 @@ class _OlvideContrasenaPageState extends State<OlvideContrasena> {
                 _buildTextField(
                   controller: model.tokenController,
                   focusNode: model.tokenFocus,
-                  label: "Token recibido",
+                  label: "Código recibido",
                   readOnly: model.tokenValidado,
                   icon: model.mostrarToken ? Icons.visibility_outlined : Icons.visibility_off_outlined,
                   obscure: !model.mostrarToken,
@@ -119,7 +120,7 @@ class _OlvideContrasenaPageState extends State<OlvideContrasena> {
                   },
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Por favor ingresa el token recibido';
+                      return 'Por favor ingresa el código recibido';
                     }
                     return null;
                   },
@@ -140,7 +141,7 @@ class _OlvideContrasenaPageState extends State<OlvideContrasena> {
                   icon: const Icon(Icons.check_circle, color: Colors.white),
                   iconAlignment: IconAlignment.end,
                   label: const Text(
-                    "Validar token",
+                    "Validar código",
                     style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                   ),
                 ),

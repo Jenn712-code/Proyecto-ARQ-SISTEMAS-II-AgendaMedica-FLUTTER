@@ -32,7 +32,8 @@ class crearCitaModel {
         "id": e["espId"],
         "nombre": e["espNombre"]
       }).toList();
-
+      especialidades.sort((a, b) =>
+          a["nombre"].toString().toLowerCase().compareTo(b["nombre"].toString().toLowerCase()));
       onUpdate();
     } else {
       throw Exception("Error al cargar especialidades");
@@ -142,7 +143,7 @@ class crearCitaModel {
           title: "Éxito",
           message: "Cita guardada con éxito.",
         );
-        Navigator.pop(context);
+        Navigator.pop(context, true);
       } else if (response.statusCode == 401) {
         await DialogUtils.showDialogCustom(
           context: context,

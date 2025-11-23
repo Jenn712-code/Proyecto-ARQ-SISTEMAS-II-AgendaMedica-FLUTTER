@@ -21,7 +21,7 @@ class Cita {
     return Cita(
       id: json['citId'] is int ? json['citId'] : int.tryParse(json['citId']?.toString() ?? '0'),
       nomMedico: json['citNomMedico'] ?? '',
-      especialidad: json['espNombre'] ?? '', // OJO: tu backend manda 'espNombre', no 'esNombre'
+      especialidad: json['espNombre'] ?? '',
       fecha: json['citFecha']?.toString() ?? '',
       hora: json['citHora']?.toString() ?? '',
       direccion: json['citDireccion'] ?? '',

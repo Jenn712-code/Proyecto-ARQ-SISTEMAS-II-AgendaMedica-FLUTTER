@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../controllers/listarCitas.dart';
 import '../services/listarCitasService.dart';
+import '../theme/AppTheme.dart';
 import 'crearCita.dart';
 import '../widgets/CitaCard.dart';
+import 'package:intl/intl.dart';
 
 class CitasDashboardConTabs extends StatefulWidget {
   const CitasDashboardConTabs({super.key});
@@ -37,17 +39,16 @@ class _CitasDashboardConTabsState extends State<CitasDashboardConTabs> with Sing
     setState(() => _token = token);
 
     try {
-      final data = await _citaService.listarCitas(token);
+      final data = await _citaService.listarCitasBD(token);
       setState(() => _citas = data);
     } catch (e) {
       debugPrint('Error al cargar citas: $e');
     }
   }
 
-
   Widget _buildCitaList(List<Cita> citas, Color color) {
     if (citas.isEmpty) {
-      return const Center(child: Text("No hay citas registradas."));
+      return Center(child: Text("No hay citas registradas en esta categoria", style: AppTheme.subtitleText));
     }
 
     return ListView.builder(
@@ -64,6 +65,43 @@ class _CitasDashboardConTabsState extends State<CitasDashboardConTabs> with Sing
         );
       },
     );
+  }
+
+  List<Cita> _ordenarPorFecha(List<Cita> citas) {
+    final listaOrdenada = List<Cita>.from(citas); // Copia segura
+
+    listaOrdenada.sort((a, b) {
+      final fechaHoraA = _parseFechaHora(a.fecha, a.hora);
+      final fechaHoraB = _parseFechaHora(b.fecha, b.hora);
+      return fechaHoraA.compareTo(fechaHoraB);
+    });
+
+    return listaOrdenada;
+  }
+
+  DateTime _parseFechaHora(String? fecha, String? hora) {
+    if (fecha == null) return DateTime(2100);
+
+    try {
+      final date = DateFormat('yyyy-MM-dd').parse(fecha);
+
+      if (hora == null || hora.isEmpty) {
+        return date;
+      }
+
+      // Soporta: 02:30 PM o 14:30
+      DateTime time;
+      if (hora.contains("AM") || hora.contains("PM")) {
+        time = DateFormat('hh:mm a').parse(hora);
+      } else {
+        time = DateFormat('HH:mm').parse(hora);
+      }
+
+      return DateTime(date.year, date.month, date.day, time.hour, time.minute);
+    } catch (e) {
+      debugPrint("Error parseando fecha/hora: $e");
+      return DateTime(2100);
+    }
   }
 
   @override
@@ -87,20 +125,27 @@ class _CitasDashboardConTabsState extends State<CitasDashboardConTabs> with Sing
 
           // CONTENIDO DE LAS TABS
           Expanded(
-            child: _citas == null
-                ? const Center(child: CircularProgressIndicator()) // Cargando
-                : TabBarView(
-              controller: _tabController,
-              children: [
-                // Pendientes (borde azul oscuro)
-                _buildCitaList(_citas!['pendientes'] ?? [], Colors.blue.shade800),
-
-                // 2Asistidas (borde verde)
-                _buildCitaList(_citas!['asistidas'] ?? [], Colors.green),
-
-                // 3No Asistidas (borde rojo)
-                _buildCitaList(_citas!['noAsistidas'] ?? [], Colors.red),
-              ],
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 75),
+              child: _citas == null
+                  ? const Center(child: CircularProgressIndicator()) // Cargando
+                  : TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildCitaList(
+                    _ordenarPorFecha(_citas!['pendientes'] ?? []),
+                    Colors.blue.shade800,
+                  ),
+                  _buildCitaList(
+                    _ordenarPorFecha(_citas!['asistidas'] ?? []),
+                    Colors.green,
+                  ),
+                  _buildCitaList(
+                    _ordenarPorFecha(_citas!['noAsistidas'] ?? []),
+                    Colors.red,
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -108,14 +153,18 @@ class _CitasDashboardConTabsState extends State<CitasDashboardConTabs> with Sing
 
       // BOTÓN FLOTANTE para la creación de citas
       floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 20.0),
+        padding: const EdgeInsets.only(bottom: 5),
         child: ElevatedButton.icon(
-          onPressed: () {
-            // NAVEGA a tu formulario (crearCita.dart)
-            Navigator.push(
+          onPressed: () async {
+            final result = await Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const crearCita()),
             );
+
+            // Si se creó una cita, recargamos los datos
+            if (result == true) {
+              _loadCitas();
+            }
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.blue.shade900,
@@ -126,10 +175,10 @@ class _CitasDashboardConTabsState extends State<CitasDashboardConTabs> with Sing
             ),
           ),
           icon: const Icon(Icons.add),
-          label: const Text("Crear cita", style: TextStyle(fontSize: 18)),
+          label: const Text("Crear", style: TextStyle(fontSize: 18)),
         ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButtonLocation: FloatingActionButtonLocation.miniCenterFloat,
     );
   }
 }
