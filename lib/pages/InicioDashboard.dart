@@ -211,15 +211,12 @@ class _InicioDashboardState extends State<InicioDashboard> {
             itemCount: resultados.length,
             itemBuilder: (context, index) {
               final item = resultados[index];
+
               if (item is Cita) {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: CitaCard(
-                    nomMedico: item.nomMedico ?? "",
-                    especialidad: item.especialidad ?? "",
-                    fecha: item.fecha ?? "",
-                    hora: item.hora ?? "",
-                    direccion: item.direccion ?? "",
+                    cita: item,
                     colorFondo: AppTheme.primaryColor,
                   ),
                 );

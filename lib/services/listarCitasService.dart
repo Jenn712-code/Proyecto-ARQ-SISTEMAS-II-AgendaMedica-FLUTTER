@@ -29,4 +29,56 @@ class CitaService {
       throw Exception('Error al obtener citas: ${response.statusCode}');
     }
   }
+
+  /*static Future<Map<String, dynamic>> actualizarCita(Map<String, dynamic> citaJson, String token) async {
+    final url = Uri.parse("${ApiConfig.baseUrl}/citas/actualizar");
+
+    final response = await http.put(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+      body: json.encode(citaJson),
+    );
+
+    final data = json.decode(response.body);
+
+    return {
+      "status": response.statusCode,
+      "data": data,
+    };
+  }*/
+
+  static Future<bool> actualizarCita(Map<String, dynamic> cita, String token) async {
+    final url = Uri.parse("${ApiConfig.baseUrl}/citas/actualizar");
+
+    final response = await http.put(
+      url,
+      headers: {
+        "Authorization": "Bearer $token",
+        "Content-Type": "application/json",
+      },
+      body: jsonEncode(cita),
+    );
+
+    if (response.statusCode == 200) {
+      return true;
+    }
+    print("Error al actualizar cita: ${response.statusCode} - ${response.body}");
+    return false;
+  }
+
+  static Future<bool> eliminarCita(int id, String token) async {
+    final url = Uri.parse("${ApiConfig.baseUrl}/citas/eliminar/$id");
+
+    final response = await http.delete(
+      url,
+      headers: {
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    return response.statusCode == 200;
+  }
 }

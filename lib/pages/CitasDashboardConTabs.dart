@@ -24,8 +24,8 @@ class _CitasDashboardConTabsState extends State<CitasDashboardConTabs> with Sing
   @override
   void initState() {
     super.initState();
-    _loadCitas();
     _tabController = TabController(length: 3, vsync: this);
+    _loadCitas();
   }
 
   Future<void> _loadCitas() async {
@@ -48,23 +48,32 @@ class _CitasDashboardConTabsState extends State<CitasDashboardConTabs> with Sing
 
   Widget _buildCitaList(List<Cita> citas, Color color) {
     if (citas.isEmpty) {
-      return Center(child: Text("No hay citas registradas en esta categoria", style: AppTheme.subtitleText));
+      return Center(
+        child: Text(
+          "No hay citas registradas en esta categoria",
+          style: AppTheme.subtitleText,
+        ),
+      );
     }
 
     return ListView.builder(
       itemCount: citas.length,
       itemBuilder: (context, index) {
         final cita = citas[index];
+
         return CitaCard(
-          nomMedico: cita.nomMedico ?? '',
-          especialidad: cita.especialidad ?? '',
-          fecha: cita.fecha ?? '',
-          hora: cita.hora ?? '',
-          direccion: cita.direccion ?? '',
-          colorFondo: color,
+          cita: cita,
+          colorFondo: AppTheme.primaryColor,
+          onDelete: _recargarCitas,
+          onUpdate: _recargarCitas,
         );
       },
     );
+  }
+
+  void _recargarCitas() async {
+    await _loadCitas();
+    if (mounted) setState(() {});
   }
 
   List<Cita> _ordenarPorFecha(List<Cita> citas) {
