@@ -28,4 +28,36 @@ class MedicamentosService {
       throw Exception('Error al obtener los medicamentos: ${response.statusCode}');
     }
   }
+
+  static Future<bool> actualizarMedicamento(Map<String, dynamic> medicamento, String token) async {
+    final url = Uri.parse("${ApiConfig.baseUrl}/medicamentos/actualizar");
+
+    final response = await http.put(
+      url,
+      headers: {
+        "Authorization": "Bearer $token",
+        "Content-Type": "application/json",
+      },
+      body: jsonEncode(medicamento),
+    );
+
+    if (response.statusCode == 200) {
+      return true;
+    }
+    print("Error al actualizar medicamento: ${response.statusCode} - ${response.body}");
+    return false;
+  }
+
+  static Future<bool> eliminarMedicamento(int id, String token) async {
+    final url = Uri.parse("${ApiConfig.baseUrl}/medicamentos/eliminar/$id");
+
+    final response = await http.delete(
+      url,
+      headers: {
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    return response.statusCode == 200;
+  }
 }

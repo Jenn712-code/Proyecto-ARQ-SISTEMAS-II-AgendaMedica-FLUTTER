@@ -6,6 +6,8 @@ import '../theme/AppTheme.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import '../widgets/CustomTextField.dart';
+import '../widgets/DatePicker.dart';
+import '../widgets/TimePicker.dart';
 
 class crearMedicamento extends StatefulWidget {
   const crearMedicamento({super.key});
@@ -200,59 +202,43 @@ class _CrearMedicamentoState extends State<crearMedicamento> {
                       if (model.recordatorio) ...[
                         CustomTextField(
                           controller: model.fechaController,
-                          label: 'Fecha',
+                          label: "Fecha",
                           icon: Icons.calendar_today,
                           obscureText: false,
                           readOnly: true,
-                          onTap: () => _mostrarSelectorFecha(context),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return "La fecha es obligatoria";
+                          validator: (value) =>
+                          value == null || value.isEmpty
+                              ? "La fecha es obligatoria"
+                              : null,
+                          onTap: () async {
+                            final fecha = await DatePickerUtils
+                                .mostrarSelectorFecha(context);
+                            if (fecha != null) {
+                              model.fechaController.text =
+                              "${fecha.year}-${fecha.month.toString().padLeft(
+                                  2, '0')}-${fecha.day.toString().padLeft(
+                                  2, '0')}";
+                              setState(() {});
                             }
-                            return null;
                           },
                         ),
+
                         const SizedBox(height: 15),
 
                         CustomTextField(
                           controller: model.horaController,
-                          label: 'Hora',
+                          label: "Hora",
                           icon: Icons.access_time,
                           obscureText: false,
                           readOnly: true,
+                          validator: (value) =>
+                          value == null || value.isEmpty
+                              ? "La hora es obligatoria"
+                              : null,
                           onTap: () async {
-                            TimeOfDay? pickedTime = await showTimePicker(
-                              context: context,
-                              initialTime: TimeOfDay.now(),
-                              builder: (context, child) {
-                                return Localizations.override(
-                                  context: context,
-                                  locale: const Locale('en'), // mantiene formato AM/PM
-                                  delegates: const [
-                                    _CustomEnglishMaterialLocalizationsDelegate(),
-                                    GlobalWidgetsLocalizations.delegate,
-                                    GlobalCupertinoLocalizations.delegate,
-                                  ],
-                                  child: MediaQuery(
-                                    data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: false),
-                                    child: child!,
-                                  ),
-                                );
-                              },
-                            );
-
-                            if (pickedTime != null) {
-                              final hour = pickedTime.hourOfPeriod == 0 ? 12 : pickedTime.hourOfPeriod;
-                              final minute = pickedTime.minute.toString().padLeft(2, '0');
-                              final period = pickedTime.period == DayPeriod.am ? 'AM' : 'PM';
-                              model.horaController.text = "$hour:$minute $period";
-                            }
-                          },
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return "La hora es obligatoria";
-                            }
-                            return null;
+                            final hora =
+                            await TimePickerUtils.mostrarSelectorHora(context);
+                            if (hora != null) model.horaController.text = hora;
                           },
                         ),
                       ],
@@ -285,170 +271,4 @@ class _CrearMedicamentoState extends State<crearMedicamento> {
       ),
     );
   }
-
-  Future<void> _mostrarSelectorFecha(BuildContext context) async {
-    DateTime fechaSeleccionada = DateTime.now();
-
-    await showDialog(
-      context: context,
-      builder: (ctx) {
-        return Dialog(
-          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              // Aseguramos que el contenido no desborde
-              return ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 520),
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text(
-                        "Seleccionar fecha",
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-
-                      // Calendario adaptable
-                      CalendarDatePicker(
-                        initialDate: fechaSeleccionada,
-                        firstDate: DateTime(2020),
-                        lastDate: DateTime(2100),
-                        onDateChanged: (newDate) {
-                          fechaSeleccionada = newDate;
-                        },
-                      ),
-
-                      const SizedBox(height: 8),
-
-                      // Botones personalizados
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: TextButton(
-                                onPressed: () => Navigator.of(ctx).pop(),
-                                style: TextButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(vertical: 2),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(24),
-                                  ),
-                                ),
-                                child: const Text(
-                                  "Cancelar",
-                                  style: TextStyle(color: Colors.black87),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 5),
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: () {
-                                  Navigator.of(ctx).pop(fechaSeleccionada);
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.blue.shade900,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 10),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(24),
-                                  ),
-                                ),
-                                icon: const Icon(Icons.check),
-                                label: const Text("Aceptar"),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        );
-      },
-    ).then((fechaSeleccionadaFinal) {
-      if (fechaSeleccionadaFinal != null) {
-        model.fechaController.text =
-            model.fechaController.text =
-        "${fechaSeleccionadaFinal.year.toString().padLeft(4,'0')}/${fechaSeleccionadaFinal.month.toString().padLeft(2,'0')}/${fechaSeleccionadaFinal.day.toString().padLeft(2,'0')}";
-        setState(() {}); // Refrescar UI
-      }
-    });
-  }
-}
-
-// ------------------------
-// 1) Localizations personalizadas
-// ------------------------
-class CustomEnglishMaterialLocalizations extends DefaultMaterialLocalizations {
-  // título del diálogo
-  @override
-  String get timePickerDialHelpText => 'Seleccionar con reloj';
-
-  @override
-  String get dialModeButtonLabel => 'Modo reloj';
-
-  // texto del botón OK / aceptar
-  @override
-  String get okButtonLabel => 'Aceptar';
-
-  // texto del botón cancelar
-  @override
-  String get cancelButtonLabel => 'Cancelar';
-
-  // tooltip / label para cambiar a entrada por texto
-  @override
-  String get inputTimeModeButtonLabel => 'Introducir hora';
-
-  // texto usado en la cabecera cuando se está en modo input (teclado)
-  @override
-  String get timePickerInputHelpText => 'Introduzca la hora';
-
-  // mensaje de error cuando la hora ingresada no es válida (Input mode)
-  @override
-  String get invalidTimeLabel => 'Introduce una hora válida';
-
-  // abreviaciones AM/PM si quieres mostrarlas en español
-  @override
-  String get anteMeridiemAbbreviation => 'AM';
-
-  @override
-  String get postMeridiemAbbreviation => 'PM';
-
-  @override
-  String get timePickerHourLabel => 'Hora';
-
-  @override
-  String get timePickerMinuteLabel => 'Minutos';
-}
-
-// ------------------------
-// 2) Delegado para cargar la localización personalizada
-// ------------------------
-class _CustomEnglishMaterialLocalizationsDelegate
-    extends LocalizationsDelegate<MaterialLocalizations> {
-  const _CustomEnglishMaterialLocalizationsDelegate();
-
-  @override
-  bool isSupported(Locale locale) => locale.languageCode == 'en';
-
-  @override
-  Future<MaterialLocalizations> load(Locale locale) async {
-    return Future.value(CustomEnglishMaterialLocalizations());
-  }
-
-  @override
-  bool shouldReload(covariant LocalizationsDelegate<MaterialLocalizations> old) =>
-      false;
 }

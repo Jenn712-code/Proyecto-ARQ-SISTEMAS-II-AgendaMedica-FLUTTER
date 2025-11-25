@@ -30,26 +30,6 @@ class CitaService {
     }
   }
 
-  /*static Future<Map<String, dynamic>> actualizarCita(Map<String, dynamic> citaJson, String token) async {
-    final url = Uri.parse("${ApiConfig.baseUrl}/citas/actualizar");
-
-    final response = await http.put(
-      url,
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $token",
-      },
-      body: json.encode(citaJson),
-    );
-
-    final data = json.decode(response.body);
-
-    return {
-      "status": response.statusCode,
-      "data": data,
-    };
-  }*/
-
   static Future<bool> actualizarCita(Map<String, dynamic> cita, String token) async {
     final url = Uri.parse("${ApiConfig.baseUrl}/citas/actualizar");
 

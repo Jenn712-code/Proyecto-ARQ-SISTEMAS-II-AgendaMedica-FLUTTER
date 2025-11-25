@@ -42,12 +42,17 @@ class _MedicamentosDashboardConTabsState extends State<MedicamentosDashboardConT
       debugPrint('No se encontró token guardado');
       return;
     }
+
+    if (!mounted) return; // protege el primer setState
     setState(() => _token = token);
 
     try {
       final data = await _medicamentosService.listarMedicamentosBD(token);
+
+      if (!mounted) return; // protege el setState después del await
       setState(() => _medicamentos = data);
     } catch (e) {
+      if (!mounted) return;
       debugPrint('Error al cargar los medicamentos: $e');
     }
   }
@@ -60,17 +65,20 @@ class _MedicamentosDashboardConTabsState extends State<MedicamentosDashboardConT
     return ListView.builder(
       itemCount: medicamentos.length,
       itemBuilder: (context, index) {
-        final med = medicamentos[index];
+        final medicamento = medicamentos[index];
         return MedicamentoCard(
-          nombre: med.nombre ?? '',
-          dosis: med.dosis ?? '',
-          frecuencia: med.frecuencia ?? '',
-          duracion: med.duracion ?? '',
-          fecha: med.fecha ?? '',
+          medicamento: medicamento,
+          onDelete: _recargarMedicamentos,
+          onUpdate: _recargarMedicamentos,
           colorFondo: color,
         );
       },
     );
+  }
+
+  void _recargarMedicamentos() async {
+    await _loadMedicamentos();
+    if (mounted) setState(() {});
   }
 
   List<Medicamento> _ordenarPorFechaHora(List<Medicamento> medicamentos) {

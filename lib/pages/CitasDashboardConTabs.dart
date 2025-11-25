@@ -36,12 +36,19 @@ class _CitasDashboardConTabsState extends State<CitasDashboardConTabs> with Sing
       debugPrint('No se encontró token guardado');
       return;
     }
+
+    if (!mounted) return; // <-- protege el setState
+
     setState(() => _token = token);
 
     try {
       final data = await _citaService.listarCitasBD(token);
+
+      if (!mounted) return; // <-- protege el setState después del await
+
       setState(() => _citas = data);
     } catch (e) {
+      if (!mounted) return;
       debugPrint('Error al cargar citas: $e');
     }
   }

@@ -5,6 +5,7 @@ import '../controllers/listarMedicamentos.dart';
 import '../theme/AppTheme.dart';
 import '../widgets/CitaCard.dart';
 import '../widgets/MedicamentoCard.dart';
+import 'package:diacritic/diacritic.dart';
 
 class InicioDashboard extends StatefulWidget {
   final List<Cita> citas;
@@ -31,15 +32,21 @@ class _InicioDashboardState extends State<InicioDashboard> {
     resultados = [...widget.citas, ...widget.medicamentos];
   }
   void _filtrarResultados(String query) {
-    final q = query.toLowerCase();
-    final citasFiltradas = widget.citas.where((c) =>
-    (c.nomMedico?.toLowerCase().contains(q) ?? false) ||
-        (c.especialidad?.toLowerCase().contains(q) ?? false)
-    ).toList();
+    // Convertimos la query a minúsculas y quitamos tildes
+    final q = removeDiacritics(query.toLowerCase());
 
-    final medicamentosFiltrados = widget.medicamentos.where((m) =>
-    (m.nombre?.toLowerCase().contains(q) ?? false)
-    ).toList();
+    // Filtrar citas
+    final citasFiltradas = widget.citas.where((c) {
+      final nomMed = removeDiacritics(c.nomMedico.toLowerCase() ?? '');
+      final esp = removeDiacritics(c.especialidad.toLowerCase() ?? '');
+      return nomMed.contains(q) || esp.contains(q);
+    }).toList();
+
+    // Filtrar medicamentos
+    final medicamentosFiltrados = widget.medicamentos.where((m) {
+      final nombre = removeDiacritics(m.nombre.toLowerCase() ?? '');
+      return nombre.contains(q);
+    }).toList();
 
     setState(() {
       busqueda = query;
@@ -224,11 +231,7 @@ class _InicioDashboardState extends State<InicioDashboard> {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: MedicamentoCard(
-                    nombre: item.nombre ?? "",
-                    dosis: item.dosis ?? "",
-                    frecuencia: item.frecuencia ?? "",
-                    duracion: item.duracion ?? "",
-                    fecha: item.fecha ?? "",
+                    medicamento: item,
                     colorFondo: Color(0xFF4AA993),
                   ),
                 );

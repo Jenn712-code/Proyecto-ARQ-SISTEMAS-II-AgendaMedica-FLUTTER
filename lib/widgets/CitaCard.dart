@@ -204,8 +204,7 @@ class _CitaCardState extends State<CitaCard> {
   // ==============================
   // POPUP DE EDITAR CITA
   // ==============================
-  void mostrarPopupEditar(BuildContext parentContext, Cita cita,
-      Function onUpdated) async {
+  void mostrarPopupEditar(BuildContext parentContext, Cita cita, Function onUpdated) async {
     final TextEditingController medicoCtrl = TextEditingController(text: cita.nomMedico ?? '');
     final TextEditingController fechaCtrl = TextEditingController(text: cita.fecha ?? '');
     final TextEditingController horaCtrl = TextEditingController(text: cita.hora ?? '');
@@ -213,8 +212,27 @@ class _CitaCardState extends State<CitaCard> {
 
     int? espSeleccionada = cita.espId;
     String estadoSeleccionado = cita.estado ?? "Pendiente";
-
     final _formKey = GlobalKey<FormState>();
+
+    // HORA: convertir de 24h a 12h
+    final hora24 = cita.hora ?? '';
+    if (hora24.isNotEmpty) {
+      try {
+        final dateTime = DateFormat("HH:mm").parse(hora24);
+        horaCtrl.text = DateFormat("hh:mm a").format(dateTime); // ej: "02:30 PM"
+      } catch (_) {
+        horaCtrl.text = hora24; // fallback
+      }
+    }
+
+    String convertirHora12a24(String hora12) {
+      try {
+        final dateTime = DateFormat("hh:mm a").parse(hora12);
+        return DateFormat("HH:mm").format(dateTime); // ej: "14:30"
+      } catch (_) {
+        return hora12;
+      }
+    }
 
     showDialog(
       context: context,
@@ -330,7 +348,7 @@ class _CitaCardState extends State<CitaCard> {
                       Center(
                         child: FractionallySizedBox(
                           widthFactor: 0.8,
-                          child:CustomDropdown<int>(
+                          child: CustomDropdown<int>(
                               label: "Especialidad",
                               value: espSeleccionada,
                               items: especialidades.map((esp) {
@@ -350,9 +368,9 @@ class _CitaCardState extends State<CitaCard> {
                         ),
                       ),
 
-                        const SizedBox(height: 15),
+                      const SizedBox(height: 15),
 
-                        // ESTADO
+                      // ESTADO
                       Center(
                       child: FractionallySizedBox(
                         widthFactor: 0.8,
@@ -443,11 +461,13 @@ class _CitaCardState extends State<CitaCard> {
                         return;
                       }
 
+                      final hora24 = convertirHora12a24(horaCtrl.text.trim());
+
                       final citaActualizada = {
                         "citId": cita.id,
                         "citNomMedico": medicoCtrl.text.trim(),
                         "citFecha": fechaCtrl.text.trim(),
-                        "citHora": horaCtrl.text.trim(),
+                        "citHora": hora24,
                         "citDireccion": direccionCtrl.text.trim(),
                         "citEstado": estadoSeleccionado,
                         "pacCedula": pacCedula,
